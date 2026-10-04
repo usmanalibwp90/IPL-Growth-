@@ -35,6 +35,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import ManageGateways from './pages/admin/ManageGateways';
 import ManageWithdrawMethods from './pages/admin/ManageWithdrawMethods';
 import ManageReferral from './pages/admin/ManageReferral';
+import AdminLogin from './pages/admin/AdminLogin';
 
 // Placeholder for other routes
 const Placeholder = ({ title }) => (
@@ -168,6 +169,7 @@ function App() {
         </Route>
         
         {/* Admin Routes (Full Width) */}
+        <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<ManageUsers />} />

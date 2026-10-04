@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Edit, Trash2, Ban, CheckCircle, MoreVertical, X } from 'lucide-react';
 
 const ManageUsers = () => {
-  // Dummy users list
-  const [users, setUsers] = useState([
-    { id: 'USR-001', name: 'Ali Raza', email: 'ali@example.com', balance: 5000, plan: 'Plan 1', status: 'Active', joined: '10 Sep 2026' },
-    { id: 'USR-002', name: 'Zainab Bibi', email: 'zainab@example.com', balance: 15000, plan: 'Plan 2', status: 'Active', joined: '12 Sep 2026' },
-    { id: 'USR-003', name: 'Kamran Khan', email: 'kamran@example.com', balance: 0, plan: 'None', status: 'Blocked', joined: '15 Sep 2026' },
-    { id: 'USR-004', name: 'Fatima Noor', email: 'fatima@example.com', balance: 45000, plan: 'Plan 3', status: 'Active', joined: '20 Sep 2026' },
-    { id: 'USR-005', name: 'Usman Ghani', email: 'usman@example.com', balance: 200, plan: 'Plan 1', status: 'Active', joined: '01 Oct 2026' },
-  ]);
-
+  const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingUser, setEditingUser] = useState(null);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/users')
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error(err));
+  }, []);
 
   // Edit form state
   const [editBalance, setEditBalance] = useState('');
@@ -41,11 +40,16 @@ const ManageUsers = () => {
     setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || user.status.toLowerCase() === statusFilter;
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(user => {
+    const nameStr = user?.name || '';
+    const emailStr = user?.email || '';
+    const idStr = user?.id || '';
+    const statusStr = user?.status || '';
+
+    const matchesSearch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          idStr.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || statusStr.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -108,15 +112,15 @@ const ManageUsers = () => {
                   <td style={{ padding: '20px 32px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--primary-gold)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                        {user.name.charAt(0)}
+                        {(user?.name || '?').charAt(0)}
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-dark)' }}>{user.name}</div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user.email} <span style={{ opacity: 0.5 }}>• {user.id}</span></div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-dark)' }}>{user?.name || 'Unknown'}</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user?.email || 'N/A'} <span style={{ opacity: 0.5 }}>• {user?.id || 'N/A'}</span></div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '20px 32px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {user.balance.toLocaleString()}</td>
+                  <td style={{ padding: '20px 32px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {Number(user?.balance || 0).toLocaleString()}</td>
                   <td style={{ padding: '20px 32px' }}>
                     <span style={{ padding: '6px 12px', background: user.plan !== 'None' ? '#fef3c7' : '#f1f5f9', color: user.plan !== 'None' ? '#d97706' : '#64748b', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800' }}>
                       {user.plan}

@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Phone, Lock, Eye, Shield, Key, LayoutDashboard } from 'lucide-react';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    
+    const email = `${username.toLowerCase().replace(/\s+/g, '')}@example.com`;
+    
+    try {
+      const response = await fetch('http://localhost:8787/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, mobile, email, password })
+      });
+      
+      if (response.ok) {
+        navigate('/dashboard');
+      } else {
+        const errorData = await response.json();
+        alert('Registration failed: ' + errorData.error);
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+      alert('Network error connecting to database.');
+    }
   };
 
   return (
@@ -57,17 +79,17 @@ const RegisterPage = () => {
             
             <div className="input-group">
               <User className="input-icon" size={20} />
-              <input type="text" placeholder="Username" />
+              <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
             </div>
             
             <div className="input-group">
               <Phone className="input-icon" size={20} />
-              <input type="tel" placeholder="Mobile Number" />
+              <input type="tel" placeholder="Mobile Number" value={mobile} onChange={e => setMobile(e.target.value)} />
             </div>
             
             <div className="input-group">
               <Lock className="input-icon" size={20} />
-              <input type="password" placeholder="Password" />
+              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
               <Eye className="input-action" size={20} />
             </div>
             

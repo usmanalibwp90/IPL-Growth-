@@ -4,6 +4,11 @@ import { Save, Shield, Bell, Smartphone, Globe, Users, MessageSquare, CheckCircl
 const AdminSettings = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   
+  const [adminCredentials, setAdminCredentials] = useState({
+    email: 'info@iplgrowth.online',
+    password: 'Usman@li786'
+  });
+  
   // General Config State
   const [generalConfig, setGeneralConfig] = useState({
     siteName: 'IPL Growth',
@@ -45,6 +50,11 @@ const AdminSettings = () => {
     if (savedHomeConfig) {
       setHomeConfig(JSON.parse(savedHomeConfig));
     }
+
+    const savedCreds = localStorage.getItem('admin_credentials');
+    if (savedCreds) {
+      setAdminCredentials(JSON.parse(savedCreds));
+    }
   }, []);
 
   const handleMaintenanceToggle = () => {
@@ -74,6 +84,7 @@ const AdminSettings = () => {
   const saveGeneralConfig = () => {
     localStorage.setItem('general_config', JSON.stringify(generalConfig));
     localStorage.setItem('home_config', JSON.stringify(homeConfig));
+    localStorage.setItem('admin_credentials', JSON.stringify(adminCredentials));
     setNotification({ show: true, message: 'Settings updated successfully!' });
     setTimeout(() => {
       setNotification({ show: false, message: '' });
@@ -90,6 +101,24 @@ const AdminSettings = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
         
 
+        {/* Admin Credentials Settings */}
+        <div style={{ background: 'white', borderRadius: '24px', padding: '32px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <Users size={24} color="var(--primary-gold)" />
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-dark)', fontWeight: '800' }}>Admin Credentials</h2>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '8px' }}>Admin Email</label>
+              <input value={adminCredentials.email} onChange={(e) => setAdminCredentials({...adminCredentials, email: e.target.value})} type="email" style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', outline: 'none' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '8px' }}>Admin Password</label>
+              <input value={adminCredentials.password} onChange={(e) => setAdminCredentials({...adminCredentials, password: e.target.value})} type="text" style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', outline: 'none' }} />
+            </div>
+          </div>
+        </div>
 
         {/* Security Settings */}
         <div style={{ background: 'white', borderRadius: '24px', padding: '32px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
@@ -123,6 +152,25 @@ const AdminSettings = () => {
                   <span style={{ position: 'absolute', content: '""', height: '18px', width: '18px', left: '23px', bottom: '3px', backgroundColor: 'white', borderRadius: '50%', transition: '.4s' }}></span>
                 </span>
               </label>
+            </div>
+
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #f1f5f9', borderRadius: '12px', background: '#f8fafc' }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: 'var(--text-dark)', fontWeight: '800' }}>Clear Test/Demo Data</h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>Removes all dummy deposits, withdrawals, and referral data from local storage.</p>
+              </div>
+              <button onClick={() => {
+                if (window.confirm('Are you sure you want to clear all test/demo data?')) {
+                  localStorage.removeItem('withdraw_history');
+                  localStorage.removeItem('deposit_history');
+                  localStorage.removeItem('commission_users');
+                  localStorage.removeItem('ipl_transactions');
+                  alert('Demo data cleared! Please refresh the page to see real-time data.');
+                }
+              }} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#fee2e2', color: '#dc2626', fontWeight: '800', cursor: 'pointer' }}>
+                Clear Demo Data
+              </button>
             </div>
           </div>
         </div>

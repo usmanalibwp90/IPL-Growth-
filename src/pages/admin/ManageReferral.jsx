@@ -10,12 +10,7 @@ const defaultSettings = {
   transferCooldownDays: 7
 };
 
-const dummyUsers = [
-  { id: 1, username: 'ali_raza99', totalReferrals: 12, totalEarned: 15000, unpaidCommission: 2500 },
-  { id: 2, username: 'usman_khan', totalReferrals: 5, totalEarned: 4000, unpaidCommission: 0 },
-  { id: 3, username: 'sara_khan', totalReferrals: 28, totalEarned: 45000, unpaidCommission: 12000 },
-  { id: 4, username: 'zain_ahmed', totalReferrals: 2, totalEarned: 1000, unpaidCommission: 1000 },
-];
+const dummyUsers = [];
 
 const ManageReferral = () => {
   const [activeTab, setActiveTab] = useState('settings');

@@ -1,0 +1,11 @@
+name = "ipl-worker"
+main = "src/index.ts"
+compatibility_date = "2024-04-05"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ipl-db"
+database_id = "7e2d4521-7411-4519-9b5c-5df854079cc0"

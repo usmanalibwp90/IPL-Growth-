@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, CreditCard, ArrowDownToLine, ArrowUpFromLine, Settings, Menu, X, LogOut, Wallet } from 'lucide-react';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const isAdmin = localStorage.getItem('adminToken') === 'true';
+
+  if (!isAdmin) {
+    return <Navigate to="/admin-login" replace />;
+  }
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
@@ -20,7 +26,8 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = () => {
-    navigate('/login');
+    localStorage.removeItem('adminToken');
+    navigate('/admin-login');
   };
 
   return (

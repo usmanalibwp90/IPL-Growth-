@@ -1,23 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, Shield, Key, LayoutDashboard, Fingerprint, Info } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Simulate login by setting user data
-    const user = {
-      username: 'ahmed_ali',
-      fullName: 'Ahmed Ali',
-      email: 'ahmed@ali.com',
-      phone: '+92 311 9876543',
-      country: 'Pakistan',
-      refCode: 'ahmed_ali'
-    };
-    localStorage.setItem('user', JSON.stringify(user));
-    navigate('/dashboard');
+    try {
+      const response = await fetch('http://localhost:8787/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        const errorData = await response.json();
+        alert('Login failed: ' + errorData.error);
+      }
+    } catch (err) {
+      alert('Network error connecting to backend.');
+    }
   };
 
   return (
@@ -67,12 +81,12 @@ const LoginPage = () => {
             
             <div className="input-group">
               <User className="input-icon" size={20} />
-              <input type="text" placeholder="Username" />
+              <input type="text" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             
             <div className="input-group mb-2">
               <Lock className="input-icon" size={20} />
-              <input type="password" placeholder="Password" />
+              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
               <Eye className="input-action" size={20} />
             </div>
             

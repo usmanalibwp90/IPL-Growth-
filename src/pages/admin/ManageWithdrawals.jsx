@@ -20,15 +20,6 @@ const ManageWithdrawals = () => {
       }));
     }
     
-    // If no real data, load dummy for preview
-    if (parsed.length === 0) {
-      parsed = [
-        { id: 'WD-2001', user: 'Zainab Bibi', amount: 3500, method: 'JazzCash', account: '03001234567', date: '03 Oct 2026, 11:30 AM', status: 'Pending' },
-        { id: 'WD-2002', user: 'Ali Raza', amount: 8000, method: 'Bank Transfer', account: 'PK92MEZN000123', date: '02 Oct 2026, 09:15 AM', status: 'Approved' },
-        { id: 'WD-2003', user: 'Kamran Ali', amount: 1200, method: 'EasyPaisa', account: '03451234567', date: '02 Oct 2026, 04:20 PM', status: 'Rejected' },
-        { id: 'WD-2004', user: 'Fatima Noor', amount: 15000, method: 'JazzCash', account: '03011234567', date: '01 Oct 2026, 02:10 PM', status: 'Pending' },
-      ];
-    }
     setWithdrawals(parsed);
   }, []);
 

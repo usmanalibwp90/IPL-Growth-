@@ -12,15 +12,6 @@ const ManageDeposits = () => {
     if (saved) {
       parsed = JSON.parse(saved);
     }
-    
-    if (parsed.length === 0) {
-      parsed = [
-        { id: 'DEP-1001', user: 'Ali Raza', amount: 5000, method: 'JazzCash', date: '03 Oct 2026, 10:30 AM', status: 'Pending', receipt: 'Proof_123.jpg' },
-        { id: 'DEP-1002', user: 'Zainab Bibi', amount: 15000, method: 'EasyPaisa', date: '03 Oct 2026, 09:15 AM', status: 'Approved', receipt: 'Proof_124.jpg' },
-        { id: 'DEP-1003', user: 'Usman Ghani', amount: 2500, method: 'SadaPay', date: '02 Oct 2026, 04:20 PM', status: 'Rejected', receipt: 'Proof_125.jpg' },
-        { id: 'DEP-1004', user: 'Hassan Ali', amount: 50000, method: 'JazzCash', date: '02 Oct 2026, 02:10 PM', status: 'Pending', receipt: 'Proof_126.jpg' },
-      ];
-    }
     setDeposits(parsed);
   }, []);
 
