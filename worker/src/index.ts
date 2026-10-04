@@ -33,6 +33,8 @@ app.post('/api/register', async (c) => {
     return c.json({ error: 'All fields are required' }, 400)
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
+
   try {
     const hashedPassword = await hashPassword(password);
     const id = `USR-${Math.floor(100 + Math.random() * 900)}`;
@@ -40,12 +42,14 @@ app.post('/api/register', async (c) => {
 
     await c.env.DB.prepare(
       `INSERT INTO users (id, name, mobile, email, password, joined) VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, username, mobile, email, hashedPassword, joined).run();
+    ).bind(id, username, mobile, normalizedEmail, hashedPassword, joined).run();
 
     // Create JWT Token
     const token = await sign({ id, role: 'user' }, c.env.JWT_SECRET || 'fallback-secret');
 
-    return c.json({ message: 'User registered successfully', token, user: { id, name: username, email, role: 'user' } }, 201)
+    console.log(`[REGISTER SUCCESS] User ID: ${id}, Email: ${normalizedEmail}`);
+
+    return c.json({ message: 'User registered successfully', token, user: { id, name: username, email: normalizedEmail, role: 'user' } }, 201)
   } catch (err: any) {
     if (err.message.includes('UNIQUE constraint failed')) {
       return c.json({ error: 'Mobile or Email already exists' }, 409)
@@ -62,9 +66,13 @@ app.post('/api/login', async (c) => {
     return c.json({ error: 'Email and password are required' }, 400)
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
+
   const user = await c.env.DB.prepare(
     `SELECT id, name, email, role, password, status FROM users WHERE email = ?`
-  ).bind(email).first();
+  ).bind(normalizedEmail).first();
+
+  console.log(`[LOGIN LOOKUP] Email: ${normalizedEmail}, Found: ${!!user}`);
 
   if (!user) {
     return c.json({ error: 'Invalid credentials' }, 401)
@@ -75,8 +83,11 @@ app.post('/api/login', async (c) => {
   }
 
   const hashedPassword = await hashPassword(password);
+  const isMatch = user.password === hashedPassword;
   
-  if (user.password !== hashedPassword) {
+  console.log(`[LOGIN PWD MATCH] Email: ${normalizedEmail}, Match: ${isMatch}`);
+
+  if (!isMatch) {
     return c.json({ error: 'Invalid credentials' }, 401)
   }
 
