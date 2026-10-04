@@ -9,7 +9,10 @@ const ManageUsers = () => {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/users`)
+    const token = localStorage.getItem('auth_token');
+    fetch(`${API_BASE_URL}/api/users`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(err => console.error(err));
