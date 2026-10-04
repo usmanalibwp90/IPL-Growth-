@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Trash2, Ban, CheckCircle, MoreVertical, X } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
@@ -8,7 +9,7 @@ const ManageUsers = () => {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    fetch('/api/users')
+    fetch(`${API_BASE_URL}/api/users`)
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(err => console.error(err));

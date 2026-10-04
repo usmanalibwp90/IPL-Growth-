@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Phone, Lock, Eye, Shield, Key, LayoutDashboard } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const RegisterPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, mobile, email, password })

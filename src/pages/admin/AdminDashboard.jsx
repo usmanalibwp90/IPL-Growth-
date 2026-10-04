@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, ArrowDownToLine, ArrowUpFromLine, DollarSign, TrendingUp, Activity, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const AdminDashboard = () => {
 
@@ -13,7 +14,7 @@ const AdminDashboard = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
 
   useEffect(() => {
-    fetch('/api/users')
+    fetch(`${API_BASE_URL}/api/users`)
       .then(res => res.json())
       .then(users => {
         const usersArray = Array.isArray(users) ? users : [];

@@ -1,6 +1,7 @@
 name = "ipl-worker"
 main = "src/index.ts"
 compatibility_date = "2024-04-05"
+account_id = "38ae17d39b54ae6b4e6cccd9d0c20c70"
 
 [observability]
 enabled = true
@@ -8,4 +9,4 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "ipl-db"
-database_id = "7e2d4521-7411-4519-9b5c-5df854079cc0"
+database_id = "80615b48-7f15-49b2-ab52-20d57cceace6"
