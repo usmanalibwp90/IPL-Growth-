@@ -7,11 +7,12 @@ const LoginPage = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:8787/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -86,15 +87,17 @@ const LoginPage = () => {
             
             <div className="input-group mb-2">
               <Lock className="input-icon" size={20} />
-              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-              <Eye className="input-action" size={20} />
+              <input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+              <div onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <Eye className="input-action" size={20} color={showPassword ? '#d97706' : '#9ca3af'} />
+              </div>
             </div>
             
             <div className="flex-between mb-4" style={{ fontSize: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
                 <Shield size={14} color="#10b981" /> Secure member login
               </div>
-              <a href="#" style={{ color: '#d97706', fontWeight: '600', textDecoration: 'none' }}>Forgot Password?</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); alert('Please contact Admin via WhatsApp to reset your password.'); }} style={{ color: '#d97706', fontWeight: '600', textDecoration: 'none' }}>Forgot Password?</a>
             </div>
             
             <button onClick={handleLogin} className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(217,119,6,0.3)' }}>Login Account</button>

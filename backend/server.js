@@ -20,7 +20,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       mobile TEXT NOT NULL,
-      email TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
       balance REAL DEFAULT 0,
       plan TEXT DEFAULT 'None',
       status TEXT DEFAULT 'Active',
@@ -37,24 +39,53 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // API Routes
 app.post('/api/register', (req, res) => {
-  const { username, mobile } = req.body;
+  const { username, mobile, email, password } = req.body;
   
-  if (!username || !mobile) {
-    return res.status(400).json({ error: 'Username and mobile are required' });
+  if (!username || !mobile || !email || !password) {
+    return res.status(400).json({ error: 'All fields are required' });
   }
 
   const id = `USR-${Math.floor(100 + Math.random() * 900)}`;
-  const email = `${username.toLowerCase().replace(/\s+/g, '')}@example.com`;
   const joined = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const query = `INSERT INTO users (id, name, mobile, email, joined) VALUES (?, ?, ?, ?, ?)`;
+  // Note: in a real app, hash the password using bcrypt. For simplicity keeping as is based on existing logic.
+  const query = `INSERT INTO users (id, name, mobile, email, password, joined) VALUES (?, ?, ?, ?, ?, ?)`;
   
-  db.run(query, [id, username, mobile, email, joined], function(err) {
+  db.run(query, [id, username, mobile, email, password, joined], function(err) {
     if (err) {
-      console.error(err);
+      if (err.message.includes('UNIQUE constraint')) {
+        return res.status(409).json({ error: 'Email or Mobile already registered' });
+      }
       return res.status(500).json({ error: 'Database error' });
     }
-    res.status(201).json({ message: 'User registered successfully', user: { id, name: username, mobile, email, joined } });
+    const token = 'dummy-jwt-token';
+    res.status(201).json({ message: 'User registered successfully', token, user: { id, name: username, email, role: 'user' } });
+  });
+});
+
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  db.get(`SELECT id, name, email, role, password, status FROM users WHERE email = ?`, [email], (err, user) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    if (user.status === 'Blocked') {
+      return res.status(403).json({ error: 'Account is blocked by admin' });
+    }
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = 'dummy-jwt-token';
+    res.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   });
 });
 

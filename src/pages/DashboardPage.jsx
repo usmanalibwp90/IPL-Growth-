@@ -8,7 +8,7 @@ import {
 
 const DashboardPage = () => {
   const user = JSON.parse(localStorage.getItem('user')) || {
-    username: 'GuestUser',
+    name: 'Guest User',
     refCode: 'guest_user'
   };
 
@@ -51,7 +51,7 @@ const DashboardPage = () => {
             <UserCircle size={32} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: '800' }}>{user.username}</h2>
+            <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: '800' }}>{user.name || user.username || 'User'}</h2>
             <div style={{ fontSize: '0.8rem', opacity: 0.9, fontWeight: '500' }}>Refer by: No Upliner</div>
           </div>
         </div>
@@ -95,7 +95,7 @@ const DashboardPage = () => {
         <div style={{ overflow: 'hidden' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600' }}>Referral Link</div>
           <div style={{ fontSize: '0.85rem', color: '#d97706', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            https://yourdomain.com?reference=kingfaizan
+            {window.location.origin}/register?ref={user.id || user.username || 'guest_user'}
           </div>
         </div>
         <button style={{ border: 'none', background: 'var(--gradient-gold)', padding: '10px', borderRadius: '10px', color: 'white', cursor: 'pointer', marginLeft: '12px', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.2)' }}>

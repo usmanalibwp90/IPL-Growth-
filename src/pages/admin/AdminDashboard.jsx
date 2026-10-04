@@ -13,7 +13,7 @@ const AdminDashboard = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/users')
+    fetch('/api/users')
       .then(res => res.json())
       .then(users => {
         const usersArray = Array.isArray(users) ? users : [];

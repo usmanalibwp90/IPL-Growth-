@@ -8,7 +8,7 @@ const ManageUsers = () => {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/users')
+    fetch('/api/users')
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(err => console.error(err));

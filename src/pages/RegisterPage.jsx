@@ -5,22 +5,24 @@ import { User, Phone, Lock, Eye, Shield, Key, LayoutDashboard } from 'lucide-rea
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    
-    const email = `${username.toLowerCase().replace(/\s+/g, '')}@example.com`;
-    
     try {
-      const response = await fetch('http://localhost:8787/api/register', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, mobile, email, password })
       });
       
       if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         navigate('/dashboard');
       } else {
         const errorData = await response.json();
@@ -79,7 +81,12 @@ const RegisterPage = () => {
             
             <div className="input-group">
               <User className="input-icon" size={20} />
-              <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+              <input type="text" placeholder="Full Name" value={username} onChange={e => setUsername(e.target.value)} />
+            </div>
+
+            <div className="input-group">
+              <User className="input-icon" size={20} />
+              <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             
             <div className="input-group">
@@ -89,8 +96,10 @@ const RegisterPage = () => {
             
             <div className="input-group">
               <Lock className="input-icon" size={20} />
-              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-              <Eye className="input-action" size={20} />
+              <input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+              <div onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <Eye className="input-action" size={20} color={showPassword ? '#d97706' : '#9ca3af'} />
+              </div>
             </div>
             
             <button onClick={handleRegister} className="btn btn-primary" style={{ width: '100%', marginTop: '10px', padding: '16px', borderRadius: '16px' }}>Register Account</button>
