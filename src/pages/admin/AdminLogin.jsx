@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../config';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -7,24 +8,30 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    let validEmail = 'info@iplgrowth.online';
-    let validPassword = 'Usman@li786';
-    
-    const savedCreds = localStorage.getItem('admin_credentials');
-    if (savedCreds) {
-      const parsedCreds = JSON.parse(savedCreds);
-      validEmail = parsedCreds.email;
-      validPassword = parsedCreds.password;
-    }
-
-    if (email === validEmail && password === validPassword) {
-      localStorage.setItem('adminToken', 'true');
-      navigate('/admin');
-    } else {
-      setError('Invalid email or password');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user.role === 'admin') {
+          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('adminToken', 'true');
+          navigate('/admin');
+        } else {
+          setError('Access denied: Admin role required');
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Invalid email or password');
+      }
+    } catch (err) {
+      setError('Network error connecting to database.');
     }
   };
 

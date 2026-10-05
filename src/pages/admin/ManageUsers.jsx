@@ -9,13 +9,23 @@ const ManageUsers = () => {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     fetch(`${API_BASE_URL}/api/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
-      .then(data => setUsers(data))
-      .catch(err => console.error(err));
+      .then(data => {
+        console.log("Users API response:", data);
+        if (Array.isArray(data)) {
+          setUsers(data);
+        } else if (data.users && Array.isArray(data.users)) {
+          setUsers(data.users);
+        } else {
+          console.error("Users API response is not an array:", data);
+          setUsers([]);
+        }
+      })
+      .catch(err => console.error("Users fetch error:", err));
   }, []);
 
   // Edit form state
@@ -28,20 +38,58 @@ const ManageUsers = () => {
     setEditPlan(user.plan);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    setUsers(users.map(u => 
-      u.id === editingUser.id 
-      ? { ...u, balance: Number(editBalance), plan: editPlan } 
-      : u
-    ));
-    setEditingUser(null);
-    alert('User updated successfully!');
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ balance: Number(editBalance), plan: editPlan, status: editingUser.status })
+      });
+      
+      if (res.ok) {
+        setUsers(users.map(u => 
+          u.id === editingUser.id 
+          ? { ...u, balance: Number(editBalance), plan: editPlan } 
+          : u
+        ));
+        setEditingUser(null);
+        alert('User updated successfully!');
+      } else {
+        alert('Failed to update user');
+      }
+    } catch (err) {
+      alert('Error saving user data');
+    }
   };
 
-  const toggleUserStatus = (id, currentStatus) => {
+  const toggleUserStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Blocked' : 'Active';
-    setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+    const user = users.find(u => u.id === id);
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ balance: user.balance, plan: user.plan, status: newStatus })
+      });
+      
+      if (res.ok) {
+        setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+      } else {
+        alert('Failed to change user status');
+      }
+    } catch (err) {
+      alert('Error updating user status');
+    }
   };
 
   const filteredUsers = (Array.isArray(users) ? users : []).filter(user => {

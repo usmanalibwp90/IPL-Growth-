@@ -1,3 +1,1 @@
-export const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-  ? 'http://localhost:5000' 
-  : 'https://ipl-worker.usmanalibwp99.workers.dev';
+export const API_BASE_URL = 'https://ipl-worker.usmanalibwp99.workers.dev';
