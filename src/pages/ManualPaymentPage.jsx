@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Copy, Info, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const ManualPaymentPage = () => {
   const navigate = useNavigate();
@@ -113,8 +114,16 @@ const ManualPaymentPage = () => {
       planName: plan.name || (plan.id ? `Plan ${plan.id}` : 'Plan 1')
     };
     
+    // Save locally for quick display on UI
     const existingDeposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
     localStorage.setItem('deposit_history', JSON.stringify([newDeposit, ...existingDeposits]));
+
+    // Send to backend
+    fetch(`${API_BASE_URL}/api/deposits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDeposit)
+    }).catch(err => console.error('Failed to submit deposit', err));
 
     setIsSubmitted(true);
   };

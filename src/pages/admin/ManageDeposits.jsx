@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, Eye, X, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const ManageDeposits = () => {
   const [deposits, setDeposits] = useState([]);
@@ -7,21 +8,41 @@ const ManageDeposits = () => {
   const [viewReceipt, setViewReceipt] = useState(null);
 
   useEffect(() => {
+    // Also load from local for quick render if available
     const saved = localStorage.getItem('deposit_history');
-    let parsed = [];
     if (saved) {
-      parsed = JSON.parse(saved);
+      setDeposits(JSON.parse(saved));
     }
-    setDeposits(parsed);
+    
+    // Fetch from backend
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/api/deposits`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setDeposits(data);
+          localStorage.setItem('deposit_history', JSON.stringify(data));
+        }
+      })
+      .catch(err => console.error('Failed to fetch deposits', err));
   }, []);
 
   const handleApprove = (id) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    // Update locally first for fast UI
     const updated = deposits.map(d => d.id === id ? { ...d, status: 'Approved' } : d);
     setDeposits(updated);
-    
-    const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-    const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Approved' } : t);
-    localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+    localStorage.setItem('deposit_history', JSON.stringify(updated));
+
+    // Update backend deposit status
+    fetch(`${API_BASE_URL}/api/deposits/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ status: 'Approved' })
+    }).catch(err => console.error('Failed to update deposit on backend', err));
 
     // Activate the user's plan and notify
     const approvedDeposit = updated.find(d => d.id === id);
@@ -31,14 +52,12 @@ const ManageDeposits = () => {
         localMap[approvedDeposit.userId] = approvedDeposit.planName;
         localStorage.setItem('user_plans_map', JSON.stringify(localMap));
       } else {
-        // Fallback for deposits that don't have userId
         const user = JSON.parse(localStorage.getItem('user')) || {};
         user.plan = approvedDeposit.planName;
         localStorage.setItem('user', JSON.stringify(user));
       }
       
       if (approvedDeposit.userId) {
-        // Make sure the task is available immediately!
         const userTaskKey = `ipl_user_data_${approvedDeposit.userId}`;
         const taskData = {
           last_profit_claim_at: Date.now() - (24 * 60 * 60 * 1000),
@@ -46,16 +65,13 @@ const ManageDeposits = () => {
         };
         localStorage.setItem(userTaskKey, JSON.stringify(taskData));
 
-        // Update backend database so the plan is persistent across browsers!
-        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-        fetch(`http://localhost:8787/api/users/${approvedDeposit.userId}`, {
+        fetch(`${API_BASE_URL}/api/users/${approvedDeposit.userId}`, {
            method: 'PUT',
            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
            body: JSON.stringify({ plan: approvedDeposit.planName, status: 'Active' })
         }).catch(err => console.error('Failed to update plan on backend', err));
       }
       
-      // Store notification flag in localStorage so the user sees it when they log in
       const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '{}');
       if (approvedDeposit.userId) {
          notifications[approvedDeposit.userId] = 'Aap ki payment approve ho gayi hai. Ab aap hamaray member hain. Aap ki earning shuru ho chuki hai!';
@@ -65,12 +81,17 @@ const ManageDeposits = () => {
   };
 
   const handleReject = (id) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
     const updated = deposits.map(d => d.id === id ? { ...d, status: 'Rejected' } : d);
     setDeposits(updated);
-    
-    const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-    const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Rejected' } : t);
-    localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+    localStorage.setItem('deposit_history', JSON.stringify(updated));
+
+    fetch(`${API_BASE_URL}/api/deposits/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ status: 'Rejected' })
+    }).catch(err => console.error('Failed to update deposit on backend', err));
   };
 
   const handleDelete = (id) => {

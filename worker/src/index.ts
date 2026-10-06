@@ -334,5 +334,67 @@ app.put('/api/tickets/:id', async (c) => {
   }
 });
 
+// ==========================================
+// DEPOSITS API
+// ==========================================
+
+// Create a new deposit
+app.post('/api/deposits', async (c) => {
+  try {
+    const { id, userId, user, amount, method, date, status, receipt, receiptData, trxId, planName } = await c.req.json();
+    if (!userId || !amount || !method) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    await c.env.DB.prepare(
+      `INSERT INTO deposits (id, userId, user, amount, method, date, status, receipt, receiptData, trxId, planName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, userId, user, amount, method, date, status || 'Pending', receipt, receiptData, trxId, planName).run();
+
+    return c.json({ message: 'Deposit created', id }, 201);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// Get user deposits
+app.get('/api/deposits/user/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  try {
+    const { results } = await c.env.DB.prepare(
+      `SELECT * FROM deposits WHERE userId = ? ORDER BY date DESC`
+    ).bind(userId).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// Get all deposits (admin)
+app.get('/api/deposits', adminAuth, async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(
+      `SELECT * FROM deposits ORDER BY date DESC`
+    ).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// Update deposit status
+app.put('/api/deposits/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const { status } = await c.req.json();
+    if (!status) return c.json({ error: 'Status is required' }, 400);
+    
+    await c.env.DB.prepare(`UPDATE deposits SET status = ? WHERE id = ?`).bind(status, id).run();
+    
+    return c.json({ message: 'Deposit updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
 export default app
 
