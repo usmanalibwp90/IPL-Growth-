@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Edit, Trash2, Plus, X, Save } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const initialPlans = [
   { id: 1, name: 'Plan 1', price: 460, dailyProfit: 83, total: 4590, validity: '55 Day', status: 'Active' },
@@ -17,10 +18,29 @@ const initialPlans = [
 ];
 
 const ManagePlans = () => {
-  const [plans, setPlans] = useState(initialPlans);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [formData, setFormData] = useState({ name: '', price: '', dailyProfit: '', total: '', validity: '55 Day', status: 'Active' });
+
+  const fetchPlans = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/plans`);
+      const data = await res.json();
+      setPlans(data);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to fetch plans');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
 
   const handleOpenModal = (plan = null) => {
     if (plan) {
@@ -33,19 +53,57 @@ const ManagePlans = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editingPlan) {
-      setPlans(plans.map(p => p.id === editingPlan.id ? { ...formData, id: p.id } : p));
-    } else {
-      setPlans([...plans, { ...formData, id: plans.length > 0 ? Math.max(...plans.map(p => p.id)) + 1 : 1 }]);
+    const token = localStorage.getItem('token');
+    try {
+      const url = editingPlan 
+        ? `${API_BASE_URL}/api/plans/${editingPlan.id}`
+        : `${API_BASE_URL}/api/plans`;
+      const method = editingPlan ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        setIsModalOpen(false);
+        fetchPlans(); // Refresh the list
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to save plan');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving plan');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this plan?')) {
-      setPlans(plans.filter(p => p.id !== id));
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/plans/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          fetchPlans(); // Refresh the list
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Failed to delete plan');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error deleting plan');
+      }
     }
   };
 
@@ -61,6 +119,11 @@ const ManagePlans = () => {
         </button>
       </div>
 
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>Loading plans...</div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'red' }}>{error}</div>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
         {plans.map((plan) => (
           <div key={plan.id} style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
@@ -103,6 +166,7 @@ const ManagePlans = () => {
           </div>
         ))}
       </div>
+      )}
 
       {/* Edit/Add Plan Modal */}
       {isModalOpen && (

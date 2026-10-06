@@ -126,19 +126,86 @@ const adminAuth = async (c: any, next: any) => {
   }
   const token = authHeader.split(' ')[1];
   try {
-    const payload = await verify(token, c.env.JWT_SECRET || 'fallback-secret');
+    const payload = await verify(token, c.env.JWT_SECRET || 'fallback-secret', 'HS256');
     if (payload.role !== 'admin') {
       return c.json({ error: 'Forbidden: Admin access required' }, 403)
     }
     await next();
-  } catch (e) {
-    return c.json({ error: 'Invalid token' }, 401)
+  } catch (e: any) {
+    console.error("JWT verify error:", e);
+    return c.json({ error: 'Invalid token', details: e.message, stack: e.stack, name: e.name }, 401)
   }
 }
 
 app.get('/api/users', adminAuth, async (c) => {
   const { results } = await c.env.DB.prepare(`SELECT id, name, email, mobile, balance, plan, status, joined, role FROM users ORDER BY joined DESC`).all();
   return c.json(results);
+})
+
+app.put('/api/users/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  const { balance, plan, status } = await c.req.json();
+  try {
+    const { success } = await c.env.DB.prepare(
+      `UPDATE users SET balance = ?, plan = ?, status = ? WHERE id = ?`
+    ).bind(balance, plan, status, id).run();
+    if (success) {
+      return c.json({ message: 'User updated successfully' }, 200);
+    }
+    return c.json({ error: 'Failed to update user' }, 500);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+})
+
+// Plans Endpoints
+app.get('/api/plans', async (c) => {
+  const { results } = await c.env.DB.prepare(`SELECT * FROM plans ORDER BY id ASC`).all();
+  return c.json(results);
+})
+
+app.post('/api/plans', adminAuth, async (c) => {
+  const { name, price, dailyProfit, total, validity, status } = await c.req.json();
+  try {
+    const { success } = await c.env.DB.prepare(
+      `INSERT INTO plans (name, price, dailyProfit, total, validity, status) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(name, price, dailyProfit, total, validity, status || 'Active').run();
+    if (success) {
+      return c.json({ message: 'Plan created successfully' }, 201);
+    }
+    return c.json({ error: 'Failed to create plan' }, 500);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+})
+
+app.put('/api/plans/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  const { name, price, dailyProfit, total, validity, status } = await c.req.json();
+  try {
+    const { success } = await c.env.DB.prepare(
+      `UPDATE plans SET name = ?, price = ?, dailyProfit = ?, total = ?, validity = ?, status = ? WHERE id = ?`
+    ).bind(name, price, dailyProfit, total, validity, status, id).run();
+    if (success) {
+      return c.json({ message: 'Plan updated successfully' }, 200);
+    }
+    return c.json({ error: 'Failed to update plan' }, 500);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+})
+
+app.delete('/api/plans/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const { success } = await c.env.DB.prepare(`DELETE FROM plans WHERE id = ?`).bind(id).run();
+    if (success) {
+      return c.json({ message: 'Plan deleted successfully' }, 200);
+    }
+    return c.json({ error: 'Failed to delete plan' }, 500);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
 })
 
 export default app
