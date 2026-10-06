@@ -37,6 +37,24 @@ const ManageDeposits = () => {
         localStorage.setItem('user', JSON.stringify(user));
       }
       
+      if (approvedDeposit.userId) {
+        // Make sure the task is available immediately!
+        const userTaskKey = `ipl_user_data_${approvedDeposit.userId}`;
+        const taskData = {
+          last_profit_claim_at: Date.now() - (24 * 60 * 60 * 1000),
+          next_profit_available_at: Date.now()
+        };
+        localStorage.setItem(userTaskKey, JSON.stringify(taskData));
+
+        // Update backend database so the plan is persistent across browsers!
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        fetch(`http://localhost:8787/api/users/${approvedDeposit.userId}`, {
+           method: 'PUT',
+           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+           body: JSON.stringify({ plan: approvedDeposit.planName, status: 'Active' })
+        }).catch(err => console.error('Failed to update plan on backend', err));
+      }
+      
       // Store notification flag in localStorage so the user sees it when they log in
       const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '{}');
       if (approvedDeposit.userId) {
@@ -176,6 +194,12 @@ const ManageDeposits = () => {
                 <span style={{ color: '#94a3b8', fontWeight: '700' }}>[ No Receipt / {viewReceipt.receipt} ]</span>
               )}
             </div>
+            {viewReceipt.receiptData && (
+              <a href={viewReceipt.receiptData} download={`Receipt_${viewReceipt.id}.png`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px', color: '#0ea5e9', fontWeight: '800', textDecoration: 'none', background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', cursor: 'pointer' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download Receipt Image
+              </a>
+            )}
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => { handleReject(viewReceipt.id); setViewReceipt(null); }} style={{ flex: 1, padding: '14px', background: '#fee2e2', border: 'none', borderRadius: '12px', color: '#dc2626', fontWeight: '800', cursor: 'pointer' }}>Reject</button>
               <button onClick={() => { handleApprove(viewReceipt.id); setViewReceipt(null); }} style={{ flex: 1, padding: '14px', background: '#10b981', border: 'none', borderRadius: '12px', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}>Approve Payment</button>

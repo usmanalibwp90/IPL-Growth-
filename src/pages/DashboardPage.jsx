@@ -66,7 +66,18 @@ const DashboardPage = () => {
       const msg = JSON.parse(savedMsg);
       if (msg.isActive) setAdminMessage(msg);
     }
+  }, []);
 
+  useEffect(() => {
+    if (approvalMessage) {
+      const timer = setTimeout(() => {
+        setApprovalMessage(null);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [approvalMessage]);
+
+  useEffect(() => {
     const checkBlockedStatus = async () => {
       const rawUser = localStorage.getItem('user');
       if (!rawUser) return;
@@ -103,6 +114,10 @@ const DashboardPage = () => {
             return;
           } else {
             setIsBlocked(false);
+            if (data.plan) {
+              u.plan = data.plan;
+              localStorage.setItem('user', JSON.stringify(u));
+            }
           }
         }
       } catch (err) {
@@ -112,10 +127,12 @@ const DashboardPage = () => {
       // Determine active plan
       const userId = u.id || u.email;
       const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
-      if (userId && localMap[userId]) {
+      if (u.plan && u.plan !== 'None') {
+         setActivePlan(u.plan);
+      } else if (userId && localMap[userId]) {
          setActivePlan(localMap[userId]);
       } else {
-         setActivePlan(u.plan || 'None');
+         setActivePlan('None');
       }
 
       // Check user-specific notification

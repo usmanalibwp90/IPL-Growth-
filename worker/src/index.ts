@@ -86,7 +86,7 @@ app.post('/api/login', async (c) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   const user = await c.env.DB.prepare(
-    `SELECT id, name, email, mobile, role, password, status FROM users WHERE email = ?`
+    `SELECT id, name, email, mobile, role, password, status, plan, balance FROM users WHERE email = ?`
   ).bind(normalizedEmail).first();
 
   console.log(`[LOGIN LOOKUP] Email: ${normalizedEmail}, Found: ${!!user}`);
@@ -110,7 +110,7 @@ app.post('/api/login', async (c) => {
 
   const token = await sign({ id: user.id, role: user.role }, c.env.JWT_SECRET || 'fallback-secret');
 
-  return c.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, mobile: user.mobile, role: user.role } })
+  return c.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, mobile: user.mobile, role: user.role, plan: user.plan, balance: user.balance } })
 })
 
 // Check user status
@@ -121,10 +121,10 @@ app.get('/api/user/status', async (c) => {
     return c.json({ error: 'id or email required' }, 400);
   }
   const user = await c.env.DB.prepare(
-    `SELECT id, name, email, status FROM users WHERE id = ? OR email = ?`
+    `SELECT id, name, email, status, plan, balance FROM users WHERE id = ? OR email = ?`
   ).bind(id || '', email ? email.toLowerCase().trim() : '').first();
   if (!user) return c.json({ error: 'User not found' }, 404);
-  return c.json({ id: user.id, status: user.status });
+  return c.json({ id: user.id, status: user.status, plan: user.plan, balance: user.balance });
 })
 
 

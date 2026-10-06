@@ -34,7 +34,8 @@ const MyTaskPage = () => {
       if (planInfo) dailyProfit = planInfo.daily;
     }
 
-    const stored = localStorage.getItem('ipl_user_data');
+    const userTaskKey = userId ? `ipl_user_data_${userId}` : 'ipl_user_data';
+    const stored = localStorage.getItem(userTaskKey);
     const now = Date.now();
     
     let state = stored ? JSON.parse(stored) : {
@@ -89,13 +90,16 @@ const MyTaskPage = () => {
       next_profit_available_at: next
     };
 
-    localStorage.setItem('ipl_user_data', JSON.stringify(newState));
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const currentUserId = user.id || user.email;
+    const userTaskKey = currentUserId ? `ipl_user_data_${currentUserId}` : 'ipl_user_data';
+    localStorage.setItem(userTaskKey, JSON.stringify(newState));
     
     // Add to transaction history (mock)
     const txHistory = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
     txHistory.unshift({
       id: Date.now(),
-      userId: userId,
+      userId: currentUserId,
       type: 'profit',
       amount: backendState.daily_profit_amount,
       date: now,
