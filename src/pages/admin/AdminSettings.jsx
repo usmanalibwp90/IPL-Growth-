@@ -35,6 +35,12 @@ const AdminSettings = () => {
     telegramIcon: ''
   });
 
+  const [adminMessage, setAdminMessage] = useState({
+    title: 'Important Update',
+    text: '',
+    isActive: false
+  });
+
   const [notification, setNotification] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -54,6 +60,11 @@ const AdminSettings = () => {
     const savedCreds = localStorage.getItem('admin_credentials');
     if (savedCreds) {
       setAdminCredentials(JSON.parse(savedCreds));
+    }
+    
+    const savedMsg = localStorage.getItem('admin_notification_message');
+    if (savedMsg) {
+      setAdminMessage(JSON.parse(savedMsg));
     }
   }, []);
 
@@ -85,6 +96,8 @@ const AdminSettings = () => {
     localStorage.setItem('general_config', JSON.stringify(generalConfig));
     localStorage.setItem('home_config', JSON.stringify(homeConfig));
     localStorage.setItem('admin_credentials', JSON.stringify(adminCredentials));
+    localStorage.setItem('admin_notification_message', JSON.stringify(adminMessage));
+    
     setNotification({ show: true, message: 'Settings updated successfully!' });
     setTimeout(() => {
       setNotification({ show: false, message: '' });
@@ -175,6 +188,39 @@ const AdminSettings = () => {
           </div>
         </div>
 
+        {/* Notification Settings */}
+        <div style={{ background: 'white', borderRadius: '24px', padding: '32px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <Bell size={24} color="var(--primary-gold)" />
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-dark)', fontWeight: '800' }}>Global Notification to Customers</h2>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #f1f5f9', borderRadius: '12px', background: '#f8fafc' }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: 'var(--text-dark)', fontWeight: '800' }}>Enable Notification</h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>Show this notification on the user dashboard when they click the bell.</p>
+              </div>
+              <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                <input type="checkbox" checked={adminMessage.isActive} onChange={() => setAdminMessage({...adminMessage, isActive: !adminMessage.isActive})} style={{ opacity: 0, width: 0, height: 0 }} />
+                <span style={{ position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: adminMessage.isActive ? '#10b981' : '#cbd5e1', borderRadius: '34px', transition: '.4s' }}>
+                  <span style={{ position: 'absolute', content: '""', height: '18px', width: '18px', left: adminMessage.isActive ? '23px' : '3px', bottom: '3px', backgroundColor: 'white', borderRadius: '50%', transition: '.4s' }}></span>
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '8px' }}>Notification Title</label>
+              <input value={adminMessage.title} onChange={(e) => setAdminMessage({...adminMessage, title: e.target.value})} type="text" placeholder="e.g. Server Update" style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', outline: 'none' }} />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '8px' }}>Notification Message</label>
+              <textarea value={adminMessage.text} onChange={(e) => setAdminMessage({...adminMessage, text: e.target.value})} rows="4" placeholder="Type the message that will be shown to customers..." style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', outline: 'none', resize: 'vertical' }}></textarea>
+            </div>
+          </div>
+        </div>
+
         {/* Homepage Content Editor */}
         <div style={{ background: 'white', borderRadius: '24px', padding: '32px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -229,7 +275,7 @@ const AdminSettings = () => {
               <textarea name="supportDescription" value={homeConfig.supportDescription} onChange={(e) => setHomeConfig({...homeConfig, supportDescription: e.target.value})} rows="3" style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', outline: 'none', resize: 'vertical' }}></textarea>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px' }}>
                 <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-dark)' }}>Support Option 1</h4>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px' }}>WhatsApp Number</label>
@@ -248,16 +294,6 @@ const AdminSettings = () => {
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px' }}>Upload Icon (Optional)</label>
                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'whatsappChannelIcon')} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.8rem' }} />
                 {homeConfig.whatsappChannelIcon && <div style={{marginTop: '8px'}}><img src={homeConfig.whatsappChannelIcon} alt="Preview" style={{width: '32px', height: '32px', objectFit: 'contain'}} /></div>}
-              </div>
-
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-dark)' }}>Support Option 3</h4>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px' }}>Telegram Channel Link</label>
-                <input name="telegramChannel" value={homeConfig.telegramChannel} onChange={(e) => setHomeConfig({...homeConfig, telegramChannel: e.target.value})} type="text" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.9rem', outline: 'none', marginBottom: '12px' }} />
-                
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px' }}>Upload Icon (Optional)</label>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'telegramIcon')} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.8rem' }} />
-                {homeConfig.telegramIcon && <div style={{marginTop: '8px'}}><img src={homeConfig.telegramIcon} alt="Preview" style={{width: '32px', height: '32px', objectFit: 'contain'}} /></div>}
               </div>
             </div>
           </div>

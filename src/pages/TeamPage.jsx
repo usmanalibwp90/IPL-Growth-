@@ -8,13 +8,9 @@ const TeamPage = () => {
     refCode: 'guest_user'
   };
 
-  // Dummy team members data
-  const teamMembers = [
-    { id: 1, username: 'ali_raza99', level: 'Level 1', joined: 'Oct 02, 2026', commission: 'Rs480' },
-    { id: 2, username: 'usman_khan', level: 'Level 1', joined: 'Sep 29, 2026', commission: 'Rs240' },
-    { id: 3, username: 'sara_khan', level: 'Level 2', joined: 'Sep 25, 2026', commission: 'Rs50' },
-    { id: 4, username: 'zain_ahmed', level: 'Level 1', joined: 'Sep 21, 2026', commission: 'Rs320' },
-  ];
+  const [teamMembers, setTeamMembers] = React.useState([]);
+  const [totalReferrals, setTotalReferrals] = React.useState(0);
+  const [totalCommission, setTotalCommission] = React.useState(0);
 
   const [settings, setSettings] = React.useState({
     level1: 16,
@@ -24,7 +20,7 @@ const TeamPage = () => {
     minTransferAmount: 500,
     transferCooldownDays: 7
   });
-  const [availableCommission, setAvailableCommission] = React.useState(2500);
+  const [availableCommission, setAvailableCommission] = React.useState(0);
   const [notification, setNotification] = React.useState({ show: false, message: '', type: 'error' });
 
   const showNotification = (message, type = 'error') => {
@@ -55,7 +51,17 @@ const TeamPage = () => {
     // Mocking the transfer logic
     showNotification(`Rs${availableCommission} transferred to your main wallet successfully!`, 'success');
     localStorage.setItem('last_commission_transfer', new Date().toISOString());
+    localStorage.setItem('available_commission', '0');
     setAvailableCommission(0);
+  };
+
+  const handleCopyLink = () => {
+    const link = `https://islamicprofit.com/register?ref=${user.username || user.id || 'guest_user'}`;
+    navigator.clipboard.writeText(link).then(() => {
+      showNotification('Referral link copied to clipboard!', 'success');
+    }).catch(() => {
+      showNotification('Failed to copy link.');
+    });
   };
 
   React.useEffect(() => {
@@ -63,6 +69,17 @@ const TeamPage = () => {
     if (saved) {
       setSettings(JSON.parse(saved));
     }
+    
+    // Load real team data from localStorage instead of demo data
+    const savedMembers = JSON.parse(localStorage.getItem('my_team_members') || '[]');
+    setTeamMembers(savedMembers);
+    setTotalReferrals(savedMembers.length);
+    
+    const calcCommission = savedMembers.reduce((sum, m) => sum + (Number(m.commission?.replace('Rs', '')) || 0), 0);
+    setTotalCommission(calcCommission);
+    
+    const savedAvail = Number(localStorage.getItem('available_commission')) || 0;
+    setAvailableCommission(savedAvail);
   }, []);
 
   return (
@@ -91,9 +108,9 @@ const TeamPage = () => {
         
         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '12px', backdropFilter: 'blur(5px)' }}>
           <div style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            https://islamicprofit.com?ref={user.refCode}
+            https://islamicprofit.com/register?ref={user.username || user.id || 'guest_user'}
           </div>
-          <button style={{ background: 'white', color: '#d97706', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={handleCopyLink} style={{ background: 'white', color: '#d97706', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }} onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
             <Copy size={16} /> Copy
           </button>
         </div>
@@ -106,14 +123,14 @@ const TeamPage = () => {
             <Users size={18} />
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Referrals</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-dark)' }}>24</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-dark)' }}>{totalReferrals}</div>
         </div>
         <div className="glass-card" style={{ padding: '16px', background: 'white', border: '1px solid rgba(217,119,6,0.2)' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
             <TrendingUp size={18} />
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Commission</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs4,250</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs{totalCommission.toLocaleString()}</div>
         </div>
       </div>
 
@@ -161,32 +178,42 @@ const TeamPage = () => {
       {/* Team Members List */}
       <h3 style={{ fontSize: '1rem', margin: '0 0 12px 0', color: 'var(--text-dark)', fontWeight: '800' }}>Recent Joins</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {teamMembers.map((member) => (
-          <div key={member.id} className="glass-card" style={{ padding: '16px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Users size={18} color="#64748b" />
-              </div>
-              <div>
-                <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-dark)' }}>{member.username}</h4>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  Joined: {member.joined}
+        {teamMembers.length > 0 ? (
+          teamMembers.map((member) => (
+            <div key={member.id || member.username} className="glass-card" style={{ padding: '16px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Users size={18} color="#64748b" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-dark)' }}>{member.username}</h4>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                    Joined: {member.joined}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--text-dark)' }}>
-                +{member.commission}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--text-dark)' }}>
+                  +{member.commission}
+                </div>
+                <div style={{ background: member.level === 'Level 1' ? '#dcfce7' : '#e0e7ff', color: member.level === 'Level 1' ? '#16a34a' : '#4f46e5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Award size={10} /> {member.level}
+                </div>
               </div>
-              <div style={{ background: member.level === 'Level 1' ? '#dcfce7' : '#e0e7ff', color: member.level === 'Level 1' ? '#16a34a' : '#4f46e5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Award size={10} /> {member.level}
-              </div>
-            </div>
 
+            </div>
+          ))
+        ) : (
+          <div style={{ textAlign: 'center', padding: '30px 20px', background: 'white', borderRadius: '20px', border: '1px dashed #e2e8f0' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#cbd5e1' }}>
+              <Users size={30} />
+            </div>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--text-dark)', fontWeight: '800' }}>No Team Members Yet</h4>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>Share your referral link with friends and start earning commission instantly when they invest!</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Custom Notification Modal */}

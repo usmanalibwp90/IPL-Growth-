@@ -60,7 +60,7 @@ const ProfilePage = () => {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Phone</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: '800' }}>{user.phone}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: '800' }}>{user.mobile || user.phone || 'Not provided'}</div>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ const ProfilePage = () => {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Country</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: '800' }}>{user.country}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: '800' }}>{user.country || 'Pakistan'}</div>
           </div>
         </div>
       </div>

@@ -22,6 +22,8 @@ import VerifiedPage from './pages/VerifiedPage';
 import ProfilePage from './pages/ProfilePage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import ManualPaymentPage from './pages/ManualPaymentPage';
+import SupportTicketsPage from './pages/SupportTicketsPage';
+import SupportTicketDetails from './pages/SupportTicketDetails';
 
 import ChangePasswordPage from './pages/ChangePasswordPage';
 
@@ -37,6 +39,8 @@ import ManageGateways from './pages/admin/ManageGateways';
 import ManageWithdrawMethods from './pages/admin/ManageWithdrawMethods';
 import ManageReferral from './pages/admin/ManageReferral';
 import AdminLogin from './pages/admin/AdminLogin';
+import AdminSupportTickets from './pages/admin/AdminSupportTickets';
+import AdminTicketDetails from './pages/admin/AdminTicketDetails';
 
 // Placeholder for other routes
 const Placeholder = ({ title }) => (
@@ -291,6 +295,8 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/payment-methods" element={<PaymentMethodsPage />} />
           <Route path="/manual-payment" element={<ManualPaymentPage />} />
+          <Route path="/support-tickets" element={<SupportTicketsPage />} />
+          <Route path="/support-tickets/:id" element={<SupportTicketDetails />} />
           
           <Route path="/wallet" element={<Placeholder title="Wallet" />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
@@ -308,6 +314,8 @@ function App() {
           <Route path="withdraw-methods" element={<ManageWithdrawMethods />} />
           <Route path="referrals" element={<ManageReferral />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="support-tickets" element={<AdminSupportTickets />} />
+          <Route path="support-tickets/:id" element={<AdminTicketDetails />} />
         </Route>
       </Routes>
     </Router>

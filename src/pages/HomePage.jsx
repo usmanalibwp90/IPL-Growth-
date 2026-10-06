@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Crown, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight } from 'lucide-react';
+import { Menu, Crown, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
 
 const HomePage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   
   const slideImages = ['/slider1.jpg', '/slider2.jpg', '/slider3.jpg', '/slider4.jpg'];
 
@@ -94,7 +96,7 @@ const HomePage = () => {
           </div>
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800' }}>Islamic Profit Limited</h3>
         </div>
-        <button style={{ border: 'none', background: 'var(--gradient-gold)', color: 'white', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)' }}>
+        <button onClick={() => setIsSidebarOpen(true)} style={{ border: 'none', background: 'var(--gradient-gold)', color: 'white', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)' }}>
           <Menu size={20} />
         </button>
       </header>
@@ -291,7 +293,7 @@ const HomePage = () => {
                 </div>
                 <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0, lineHeight: '1.4', maxWidth: '200px' }}>Registered with Directorate General of DNFBPs AML/CFT.</p>
               </div>
-              <button style={{ background: '#fff', border: '1px solid #d97706', color: '#d97706', borderRadius: '30px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button onClick={() => setPreviewImage('/fbr-certificate.png')} style={{ background: '#fff', border: '1px solid #d97706', color: '#d97706', borderRadius: '30px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 Preview <ArrowUpRight size={14} />
               </button>
             </div>
@@ -421,26 +423,6 @@ const HomePage = () => {
               </div>
             </div>
           </a>
-
-          {/* Telegram Channel */}
-          <a href={`https://${homeConfig.telegramChannel}`} target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '16px', padding: '16px', display: 'flex', gap: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textDecoration: 'none' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--gradient-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              {homeConfig.telegramIcon ? <img src={homeConfig.telegramIcon} alt="Icon" style={{width: '24px', height: '24px', objectFit: 'contain'}} /> : <MessageSquare size={24} />}
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1f2937', margin: '0 0 4px 0' }}>Telegram Channel</h3>
-              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 12px 0', lineHeight: '1.3' }}>Follow our official updates for the latest news and announcements.</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ background: '#fef3c7', color: '#b45309', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700' }}>
-                  Follow our updates
-                </div>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #d97706', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
-            </div>
-          </a>
-
         </div>
       </div>
 
@@ -448,6 +430,46 @@ const HomePage = () => {
       <div className="text-center" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', paddingBottom: '10px' }}>
         © 2026 Islamic Profit Limited. All rights reserved.
       </div>
+
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex' }} onClick={() => setIsSidebarOpen(false)}>
+          <div style={{ width: '280px', background: 'white', height: '100%', padding: '20px', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src="/logo.jpg" alt="Logo" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800' }}>Menu</h3>
+              </div>
+              <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#6b7280', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <Link to="/login" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '10px', background: '#f8fafc' }}>
+                <LogIn size={18} color="#d97706" /> Login Account
+              </Link>
+              <Link to="/register" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '10px', background: '#f8fafc' }}>
+                <UserPlus size={18} color="#d97706" /> Register New Account
+              </Link>
+              <Link to="/app-download" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '10px', background: '#f8fafc' }}>
+                <Crown size={18} color="#d97706" /> App Download
+              </Link>
+            </div>
+            
+            <div style={{ marginTop: 'auto', textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600' }}>
+              Islamic Profit Limited
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div onClick={() => setPreviewImage(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.9)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+           <img src={previewImage} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} alt="Certificate Preview" />
+           <div style={{ position: 'absolute', top: '30px', right: '30px', color: 'white', cursor: 'pointer', background: 'rgba(255,255,255,0.2)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={24} />
+           </div>
+        </div>
+      )}
     </div>
   );
 };

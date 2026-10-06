@@ -2,25 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Calendar, CheckCircle, Gift, Zap, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const plansData = [
+  { name: 'Plan 1', daily: 83 },
+  { name: 'Plan 2', daily: 156 },
+  { name: 'Plan 3', daily: 338 },
+  { name: 'Plan 4', daily: 610 },
+  { name: 'Plan 5', daily: 1610 },
+  { name: 'Plan 6', daily: 3011 },
+  { name: 'Plan 7', daily: 6465 },
+  { name: 'Plan 8', daily: 11919 },
+  { name: 'Plan 9', daily: 20465 },
+  { name: 'Plan 10', daily: 26465 },
+  { name: 'Plan 11', daily: 33738 },
+  { name: 'Plan 12', daily: 41011 }
+];
+
 const MyTaskPage = () => {
   const navigate = useNavigate();
 
   // Mock Backend State Initialization
   const getBackendState = () => {
-    const stored = localStorage.getItem('ipl_user_data');
-    if (stored) return JSON.parse(stored);
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const userId = user.id || user.email;
+    const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
+    const mappedPlan = (userId && localMap[userId]) ? localMap[userId] : user.plan;
+    const userPlan = mappedPlan && mappedPlan !== 'None' ? mappedPlan : null;
     
-    // Default mock user with active plan for demonstration
-    // If we want to simulate a real scenario, we start the timer at 15 seconds so the user can test the claim functionality without waiting 24 hours.
+    let dailyProfit = 0;
+    if (userPlan) {
+      const planInfo = plansData.find(p => p.name.toLowerCase() === userPlan.toLowerCase());
+      if (planInfo) dailyProfit = planInfo.daily;
+    }
+
+    const stored = localStorage.getItem('ipl_user_data');
     const now = Date.now();
-    const initialState = {
-      active_plan_id: 'Plan 1',
-      daily_profit_amount: 83,
+    
+    let state = stored ? JSON.parse(stored) : {
       last_profit_claim_at: now - (24 * 60 * 60 * 1000), 
-      next_profit_available_at: now + 15000, // 15 seconds from first load for testing
+      next_profit_available_at: now, // Available immediately on first load
     };
-    localStorage.setItem('ipl_user_data', JSON.stringify(initialState));
-    return initialState;
+
+    return {
+      ...state,
+      active_plan_id: userPlan,
+      daily_profit_amount: dailyProfit
+    };
   };
 
   const [backendState, setBackendState] = useState(getBackendState);
@@ -69,6 +95,7 @@ const MyTaskPage = () => {
     const txHistory = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
     txHistory.unshift({
       id: Date.now(),
+      userId: userId,
       type: 'profit',
       amount: backendState.daily_profit_amount,
       date: now,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Copy, Info, Clock } from 'lucide-react';
+import { ArrowLeft, Copy, Info, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const ManualPaymentPage = () => {
@@ -9,8 +9,10 @@ const ManualPaymentPage = () => {
   
   const [trxId, setTrxId] = useState('');
   const [file, setFile] = useState(null);
+  const [receiptData, setReceiptData] = useState(null);
   const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes in seconds
   const [toastMessage, setToastMessage] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -56,6 +58,16 @@ const ManualPaymentPage = () => {
     }));
   }
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      const reader = new FileReader();
+      reader.onloadend = () => setReceiptData(reader.result);
+      reader.readAsDataURL(selectedFile);
+    }
+  };
+
   const details = allGateways.find(g => g.type === gateway) || allGateways[0];
   const amountStr = plan.price.replace('Rs', '') + '.00 PKR';
 
@@ -68,26 +80,64 @@ const ManualPaymentPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    const gw = gateway.toLowerCase();
+    if (gw.includes('easy')) {
+      if (!/^\d{11}$/.test(trxId)) {
+        setToastMessage('Easypaisa Transaction ID must be exactly 11 digits.');
+        setTimeout(() => setToastMessage(null), 3500);
+        return;
+      }
+    } else if (gw.includes('jazz')) {
+      if (!/^\d{12}$/.test(trxId)) {
+        setToastMessage('Jazzcash Transaction ID must be exactly 12 digits.');
+        setTimeout(() => setToastMessage(null), 3500);
+        return;
+      }
+    }
+    
+    // Parse the correct amount from plan.price directly
+    const actualAmount = parseInt(plan.price.replace(/[^0-9]/g, ''), 10);
+    const loggedInUser = JSON.parse(localStorage.getItem('user')) || { name: 'Guest', email: 'guest@example.com' };
+
     const newDeposit = {
       id: `DEP-${Math.floor(1000 + Math.random() * 9000)}`,
-      user: 'Current User', 
-      amount: parseInt(amountStr.replace(/[^0-9]/g, '')),
+      user: loggedInUser.name || loggedInUser.username || 'Current User', 
+      userId: loggedInUser.id || loggedInUser.email,
+      amount: actualAmount,
       method: gateway,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       status: 'Pending',
       receipt: file ? file.name : 'No file',
-      trxId: trxId
+      receiptData: receiptData,
+      trxId: trxId,
+      planName: plan.name || (plan.id ? `Plan ${plan.id}` : 'Plan 1')
     };
     
     const existingDeposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
     localStorage.setItem('deposit_history', JSON.stringify([newDeposit, ...existingDeposits]));
 
-    setToastMessage('Payment proof submitted successfully! Waiting for admin approval.');
-    setTimeout(() => {
-      setToastMessage(null);
-      navigate('/dashboard');
-    }, 2500);
+    setIsSubmitted(true);
   };
+
+  if (isSubmitted) {
+    return (
+      <div className="page-transition" style={{ padding: '20px', maxWidth: 'var(--max-width)', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 8px 25px rgba(22, 163, 74, 0.2)' }}>
+          <CheckCircle size={40} color="#16a34a" />
+        </div>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '12px', textAlign: 'center' }}>Request Submitted!</h2>
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.6', marginBottom: '32px', maxWidth: '320px', fontWeight: '500' }}>
+          Your payment request has been sent to the Admin. As soon as your payment is approved, your plan will be activated automatically.
+        </p>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          style={{ width: '100%', maxWidth: '300px', padding: '16px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)' }}
+        >
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto', background: '#f0fdf4', minHeight: '100vh', position: 'relative' }}>
@@ -240,11 +290,18 @@ const ManualPaymentPage = () => {
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '8px' }}>Transaction ID / Reference Number</label>
             <input 
-              type="text" 
+              type="number" 
               placeholder="Enter transaction ID / reference" 
               required
               value={trxId}
-              onChange={(e) => setTrxId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                let maxLen = 50;
+                const gw = gateway.toLowerCase();
+                if (gw.includes('easy')) maxLen = 11;
+                else if (gw.includes('jazz')) maxLen = 12;
+                if (val.length <= maxLen) setTrxId(val);
+              }}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.85rem', outline: 'none' }} 
             />
           </div>
@@ -262,7 +319,7 @@ const ManualPaymentPage = () => {
                 id="proof-upload" 
                 type="file" 
                 accept="image/png, image/jpeg, image/webp" 
-                onChange={(e) => setFile(e.target.files[0])}
+                onChange={handleFileChange}
                 style={{ display: 'none' }}
                 required
               />

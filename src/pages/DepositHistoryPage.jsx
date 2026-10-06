@@ -5,13 +5,15 @@ import { useNavigate } from 'react-router-dom';
 const DepositHistoryPage = () => {
   const navigate = useNavigate();
 
-  // Dummy deposit history data
-  const historyData = [
-    { id: 'TRX-89321', gateway: 'Easypaisa', amount: 'Rs5,000', date: 'Oct 02, 2026', time: '14:30', status: 'Success' },
-    { id: 'TRX-45192', gateway: 'JazzCash', amount: 'Rs2,500', date: 'Sep 28, 2026', time: '09:15', status: 'Pending' },
-    { id: 'TRX-10294', gateway: 'SadaPay', amount: 'Rs10,000', date: 'Sep 25, 2026', time: '18:45', status: 'Success' },
-    { id: 'TRX-77432', gateway: 'All bank', amount: 'Rs1,000', date: 'Sep 20, 2026', time: '11:20', status: 'Failed' },
-  ];
+  const [historyData, setHistoryData] = React.useState([]);
+
+  React.useEffect(() => {
+    const data = JSON.parse(localStorage.getItem('deposit_history') || '[]');
+    setHistoryData(data);
+  }, []);
+
+  const totalDeposits = historyData.filter(d => d.status === 'Success').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
+  const pendingDeposits = historyData.filter(d => d.status === 'Pending').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -26,14 +28,25 @@ const DepositHistoryPage = () => {
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto' }}>
       
       {/* Top Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-        <div onClick={() => navigate(-1)} style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
-           <ArrowLeft size={20} color="var(--text-dark)" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div onClick={() => navigate(-1)} style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+             <ArrowLeft size={20} color="var(--text-dark)" />
+          </div>
+          <div>
+             <h1 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '800' }}>Deposit History</h1>
+             <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Track all your wallet fundings</p>
+          </div>
         </div>
-        <div>
-           <h1 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '800' }}>Deposit History</h1>
-           <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Track all your wallet fundings</p>
-        </div>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('deposit_history');
+            window.location.reload();
+          }}
+          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+        >
+          Clear
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -43,14 +56,14 @@ const DepositHistoryPage = () => {
             <Download size={18} />
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Deposits</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs17,500</div>
+          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs{totalDeposits.toLocaleString()}</div>
         </div>
         <div className="glass-card" style={{ padding: '16px', background: 'white', border: '1px solid rgba(217,119,6,0.2)' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
             <Clock size={18} />
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Pending</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs2,500</div>
+          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs{pendingDeposits.toLocaleString()}</div>
         </div>
       </div>
 
@@ -58,7 +71,12 @@ const DepositHistoryPage = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h3 style={{ fontSize: '1rem', margin: '0 0 8px 0', color: 'var(--text-dark)', fontWeight: '800' }}>Recent Transactions</h3>
         
-        {historyData.map((item, index) => {
+        {historyData.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px 20px', background: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+            <Clock size={40} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '600' }}>No deposit history found.</div>
+          </div>
+        ) : historyData.map((item, index) => {
           const statusStyle = getStatusColor(item.status);
           
           return (
@@ -70,13 +88,13 @@ const DepositHistoryPage = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '4px' }}>
-                    {item.gateway}
+                    {item.gateway || item.method || 'Gateway'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600' }}>
                     <Calendar size={12} /> {item.date} • {item.time}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600', marginTop: '2px' }}>
-                    TRX: {item.id}
+                    TRX: {item.id || item.transactionId || 'N/A'}
                   </div>
                 </div>
               </div>

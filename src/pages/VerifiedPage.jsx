@@ -1,9 +1,10 @@
-import React from 'react';
-import { ArrowLeft, ShieldCheck, CheckCircle, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ShieldCheck, CheckCircle, ExternalLink, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const VerifiedPage = () => {
   const navigate = useNavigate();
+  const [previewImage, setPreviewImage] = useState(null);
 
   return (
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto' }}>
@@ -77,12 +78,22 @@ const VerifiedPage = () => {
             </p>
           </div>
 
-          <button style={{ background: 'transparent', border: '2px solid #d97706', color: '#d97706', padding: '10px 16px', borderRadius: '30px', fontWeight: '800', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
+          <button onClick={() => setPreviewImage('/fbr-certificate.png')} style={{ background: 'transparent', border: '2px solid #d97706', color: '#d97706', padding: '10px 16px', borderRadius: '30px', fontWeight: '800', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
             Preview <ExternalLink size={16} strokeWidth={3} />
           </button>
           
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div onClick={() => setPreviewImage(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.9)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+           <img src={previewImage} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} alt="Certificate Preview" />
+           <div style={{ position: 'absolute', top: '30px', right: '30px', color: 'white', cursor: 'pointer', background: 'rgba(255,255,255,0.2)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={24} />
+           </div>
+        </div>
+      )}
 
     </div>
   );

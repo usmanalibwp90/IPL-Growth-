@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, CheckCircle, XCircle, Eye, X } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, X, Trash2 } from 'lucide-react';
 
 const ManageDeposits = () => {
   const [deposits, setDeposits] = useState([]);
@@ -22,6 +22,28 @@ const ManageDeposits = () => {
     const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
     const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Approved' } : t);
     localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+
+    // Activate the user's plan and notify
+    const approvedDeposit = updated.find(d => d.id === id);
+    if (approvedDeposit && approvedDeposit.planName) {
+      if (approvedDeposit.userId) {
+        const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
+        localMap[approvedDeposit.userId] = approvedDeposit.planName;
+        localStorage.setItem('user_plans_map', JSON.stringify(localMap));
+      } else {
+        // Fallback for deposits that don't have userId
+        const user = JSON.parse(localStorage.getItem('user')) || {};
+        user.plan = approvedDeposit.planName;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      
+      // Store notification flag in localStorage so the user sees it when they log in
+      const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '{}');
+      if (approvedDeposit.userId) {
+         notifications[approvedDeposit.userId] = 'Aap ki payment approve ho gayi hai. Ab aap hamaray member hain. Aap ki earning shuru ho chuki hai!';
+         localStorage.setItem('payment_notifications', JSON.stringify(notifications));
+      }
+    }
   };
 
   const handleReject = (id) => {
@@ -31,6 +53,17 @@ const ManageDeposits = () => {
     const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
     const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Rejected' } : t);
     localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+  };
+
+  const handleDelete = (id) => {
+    if(window.confirm('Are you sure you want to delete this transaction?')) {
+      const updated = deposits.filter(d => d.id !== id);
+      setDeposits(updated);
+      
+      const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
+      const newStorage = saved.filter(t => t.id !== id);
+      localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+    }
   };
 
   const filteredDeposits = deposits.filter(d => 
@@ -111,6 +144,9 @@ const ManageDeposits = () => {
                           </button>
                         </>
                       )}
+                      <button onClick={() => handleDelete(dep.id)} style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer' }} title="Delete">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -133,8 +169,12 @@ const ManageDeposits = () => {
             </button>
             <h2 style={{ margin: '0 0 8px 0', fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '900' }}>Payment Proof</h2>
             <p style={{ margin: '0 0 24px 0', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Transaction: {viewReceipt.id}</p>
-            <div style={{ width: '100%', height: '300px', background: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', marginBottom: '24px' }}>
-              <span style={{ color: '#94a3b8', fontWeight: '700' }}>[ Screenshot Displayed Here ]</span>
+            <div style={{ width: '100%', height: '300px', background: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', marginBottom: '24px', overflow: 'hidden' }}>
+              {viewReceipt.receiptData ? (
+                <img src={viewReceipt.receiptData} alt="Receipt" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : (
+                <span style={{ color: '#94a3b8', fontWeight: '700' }}>[ No Receipt / {viewReceipt.receipt} ]</span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => { handleReject(viewReceipt.id); setViewReceipt(null); }} style={{ flex: 1, padding: '14px', background: '#fee2e2', border: 'none', borderRadius: '12px', color: '#dc2626', fontWeight: '800', cursor: 'pointer' }}>Reject</button>

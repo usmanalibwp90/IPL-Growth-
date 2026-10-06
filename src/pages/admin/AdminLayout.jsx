@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, ArrowDownToLine, ArrowUpFromLine, Settings, Menu, X, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, ArrowDownToLine, ArrowUpFromLine, Settings, Menu, X, LogOut, Wallet, Headset } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,6 +14,21 @@ const AdminLayout = () => {
     return <Navigate to="/admin-login" replace />;
   }
 
+  const [openTicketsCount, setOpenTicketsCount] = useState(0);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch(`${API_BASE_URL}/api/tickets`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setOpenTicketsCount(data.filter(t => t.status === 'Open').length);
+          }
+        })
+        .catch(err => console.error(err));
+    }
+  }, [isAdmin, location.pathname]);
+
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Manage Users', path: '/admin/users', icon: <Users size={20} /> },
@@ -22,6 +38,7 @@ const AdminLayout = () => {
     { name: 'Team Commissions', path: '/admin/referrals', icon: <Users size={20} /> },
     { name: 'Payment Gateways', path: '/admin/gateways', icon: <Wallet size={20} /> },
     { name: 'Withdraw Methods', path: '/admin/withdraw-methods', icon: <CreditCard size={20} /> },
+    { name: 'Support Tickets', path: '/admin/support-tickets', icon: <Headset size={20} />, badge: openTicketsCount },
     { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
@@ -67,7 +84,7 @@ const AdminLayout = () => {
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
                 style={{ 
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', 
                   borderRadius: '12px', textDecoration: 'none',
                   background: isActive ? 'var(--gradient-gold)' : 'transparent',
                   color: isActive ? 'white' : 'var(--text-dark)',
@@ -75,8 +92,15 @@ const AdminLayout = () => {
                   transition: 'all 0.2s'
                 }}
               >
-                {item.icon}
-                {item.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {item.icon}
+                  {item.name}
+                </div>
+                {item.badge > 0 && (
+                  <span style={{ background: '#ef4444', color: 'white', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', fontWeight: '900' }}>
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
           })}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, CheckCircle, XCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 
 const ManageWithdrawals = () => {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -41,6 +41,17 @@ const ManageWithdrawals = () => {
     localStorage.setItem('withdraw_history', JSON.stringify(newStorage));
   };
 
+  const handleDelete = (id) => {
+    if(window.confirm('Are you sure you want to delete this withdrawal?')) {
+      const updated = withdrawals.filter(w => w.id !== id);
+      setWithdrawals(updated);
+      
+      const saved = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
+      const newStorage = saved.filter(t => t.id !== id);
+      localStorage.setItem('withdraw_history', JSON.stringify(newStorage));
+    }
+  };
+
   const filteredWithdrawals = withdrawals.filter(w => 
     w.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
     w.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,6 +64,17 @@ const ManageWithdrawals = () => {
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', color: 'var(--text-dark)', fontWeight: '900' }}>Manage Withdrawals</h1>
           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '600' }}>Review and approve user withdrawal requests.</p>
         </div>
+        <button 
+          onClick={() => {
+            if(window.confirm('Kya aap waqai tamam withdrawal data delete karna chahte hain?')) {
+              localStorage.removeItem('withdraw_history');
+              setWithdrawals([]);
+            }
+          }}
+          style={{ padding: '10px 20px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}
+        >
+          Clear All Data
+        </button>
       </div>
 
       <div style={{ background: 'white', padding: '16px 24px', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', marginBottom: '24px', display: 'flex' }}>
@@ -115,6 +137,9 @@ const ManageWithdrawals = () => {
                           </button>
                         </>
                       )}
+                      <button onClick={() => handleDelete(w.id)} style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer' }} title="Delete">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>

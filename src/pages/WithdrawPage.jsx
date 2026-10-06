@@ -10,6 +10,7 @@ const WithdrawPage = () => {
   const [accountName, setAccountName] = useState('');
   const [gateways, setGateways] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
+  const [calculatedBalance, setCalculatedBalance] = useState(0);
   
   useEffect(() => {
     const saved = localStorage.getItem('withdraw_methods');
@@ -33,6 +34,31 @@ const WithdrawPage = () => {
         { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
         { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
       ]);
+    }
+
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      const userId = u.id || u.email;
+      let dynamicBalance = 0;
+      
+      const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
+      withdrawals.forEach(w => {
+         if (w.userId === userId || w.userId === u.email || w.user === u.name) {
+            dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+         }
+      });
+      
+      const profits = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
+      profits.forEach(p => {
+         if (p.type === 'profit') {
+            if (!p.userId || p.userId === userId || p.userId === u.email || p.user === u.name) {
+               dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            }
+         }
+      });
+      
+      setCalculatedBalance(dynamicBalance);
     }
   }, []);
 
@@ -126,7 +152,7 @@ const WithdrawPage = () => {
         </div>
         <div>
            <p style={{ margin: '0 0 6px 0', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available Withdraw Balance</p>
-           <h3 style={{ margin: '0 0 6px 0', fontSize: '2rem', color: 'var(--text-dark)', fontWeight: '900' }}>Rs0.00</h3>
+           <h3 style={{ margin: '0 0 6px 0', fontSize: '2rem', color: 'var(--text-dark)', fontWeight: '900' }}>Rs{calculatedBalance.toLocaleString()}</h3>
            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Current funds available for withdrawal.</p>
         </div>
       </div>
@@ -147,19 +173,6 @@ const WithdrawPage = () => {
             
             <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--text-dark)', fontWeight: '900', textAlign: 'center' }}>{g.name}</h3>
             <p style={{ margin: '0 0 16px 0', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textAlign: 'center' }}>PKR Gateway</p>
-            
-            <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '16px' }}>
-              <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px', textAlign: 'center', background: '#f8fafc' }}>
-                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>MINIMUM</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-dark)', fontWeight: '800' }}>{g.min}</div>
-              </div>
-              <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px', textAlign: 'center', background: '#f8fafc' }}>
-                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>MAXIMUM</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-dark)', fontWeight: '800' }}>{g.max}</div>
-              </div>
-            </div>
-            
-            <p style={{ margin: '0 0 16px 0', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textAlign: 'center' }}>Fee: {g.fee}</p>
             
             <button 
               onClick={() => setSelectedGateway(g)}
@@ -200,13 +213,26 @@ const WithdrawPage = () => {
               </div>
               <div>
                 <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: 'var(--text-dark)', fontWeight: '900' }}>{selectedGateway.name}</h3>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700' }}>Min {selectedGateway.min} • Max {selectedGateway.max}</p>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700' }}>PKR Gateway</p>
               </div>
             </div>
 
+            <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '12px' }}>
+              <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px', textAlign: 'center', background: '#f8fafc' }}>
+                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>MINIMUM</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-dark)', fontWeight: '800' }}>{selectedGateway.min}</div>
+              </div>
+              <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px', textAlign: 'center', background: '#f8fafc' }}>
+                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>MAXIMUM</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-dark)', fontWeight: '800' }}>{selectedGateway.max}</div>
+              </div>
+            </div>
+            
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textAlign: 'center' }}>Fee: {selectedGateway.fee}</p>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fef3c7', borderRadius: '12px', marginBottom: '24px', border: '1px solid rgba(217,119,6,0.2)' }}>
               <span style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: '800' }}>Available Balance</span>
-              <span style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: '900' }}>Rs0.00</span>
+              <span style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: '900' }}>Rs{calculatedBalance.toLocaleString()}</span>
             </div>
 
             <form onSubmit={handleWithdrawSubmit}>

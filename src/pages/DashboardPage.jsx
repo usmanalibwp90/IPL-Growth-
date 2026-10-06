@@ -3,12 +3,25 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Menu, Bell, UserCircle, TrendingUp, Download, Upload, ClipboardList, 
   Copy, MessageCircle, MessageSquare, FileText, Users, Smartphone, ShieldCheck, 
-  Key, LogOut, Wallet, BarChart3, Users2, Activity, Ban, AlertTriangle
+  Key, LogOut, Wallet, BarChart3, Users2, Activity, Ban, AlertTriangle, CheckCircle, Headset
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [adminMessage, setAdminMessage] = useState(null);
+  const [approvalMessage, setApprovalMessage] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [activePlan, setActivePlan] = useState('None');
+  const [calculatedBalance, setCalculatedBalance] = useState(0);
+  const [stats, setStats] = useState({
+    totalDeposit: 0,
+    totalWithdraw: 0,
+    pendingDeposit: 0,
+    pendingWithdraw: 0
+  });
   const [user, setUser] = useState(() => {
     return JSON.parse(localStorage.getItem('user')) || {
       name: 'Guest User',
@@ -39,6 +52,19 @@ const DashboardPage = () => {
     const savedConfig = localStorage.getItem('home_config');
     if (savedConfig) {
       setHomeConfig(JSON.parse(savedConfig));
+    }
+    
+    // Fallback for older global message
+    const globalMsg = localStorage.getItem('payment_approved_message');
+    if (globalMsg) {
+      setApprovalMessage(globalMsg);
+      localStorage.removeItem('payment_approved_message');
+    }
+    
+    const savedMsg = localStorage.getItem('admin_notification_message');
+    if (savedMsg) {
+      const msg = JSON.parse(savedMsg);
+      if (msg.isActive) setAdminMessage(msg);
     }
 
     const checkBlockedStatus = async () => {
@@ -82,6 +108,66 @@ const DashboardPage = () => {
       } catch (err) {
         // network error
       }
+      
+      // Determine active plan
+      const userId = u.id || u.email;
+      const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
+      if (userId && localMap[userId]) {
+         setActivePlan(localMap[userId]);
+      } else {
+         setActivePlan(u.plan || 'None');
+      }
+
+      // Check user-specific notification
+      if (userId) {
+         const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '{}');
+         if (notifications[userId]) {
+             setApprovalMessage(notifications[userId]);
+             delete notifications[userId];
+             localStorage.setItem('payment_notifications', JSON.stringify(notifications));
+         }
+      }
+
+      // Calculate real-time balance and stats
+      let dynamicBalance = 0;
+      let totalDeposit = 0;
+      let pendingDeposit = 0;
+      let totalWithdraw = 0;
+      let pendingWithdraw = 0;
+
+      const deposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
+      deposits.forEach(d => {
+         if (d.userId === userId || d.userId === u.email || d.user === u.name) {
+            const amt = parseFloat(String(d.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            if (d.status === 'Approved') totalDeposit += amt;
+            else if (d.status === 'Pending') pendingDeposit += amt;
+         }
+      });
+      
+      const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
+      withdrawals.forEach(w => {
+         if (w.userId === userId || w.userId === u.email || w.user === u.name) {
+            const amt = parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            if (w.status === 'Approved') totalWithdraw += amt;
+            else if (w.status === 'Pending') pendingWithdraw += amt;
+            dynamicBalance -= amt;
+         }
+      });
+      
+      const profits = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
+      profits.forEach(p => {
+         if (p.type === 'profit') {
+            if (!p.userId || p.userId === userId || p.userId === u.email || p.user === u.name) {
+               dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            }
+         }
+      });
+      
+      setCalculatedBalance(dynamicBalance);
+      setStats({
+        totalDeposit, pendingDeposit, totalWithdraw, pendingWithdraw
+      });
+
     };
 
     checkBlockedStatus();
@@ -93,6 +179,14 @@ const DashboardPage = () => {
       clearInterval(interval);
     };
   }, []);
+
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/register?ref=${user.username || user.id || 'guest_user'}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -198,13 +292,13 @@ const DashboardPage = () => {
       
       {/* Top Header */}
       <header className="flex-between mb-4 glass-pill" style={{ padding: '8px 12px' }}>
-        <button style={{ border: 'none', background: 'white', color: 'var(--text-dark)', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-soft)' }}>
+        <button onClick={() => setIsSidebarOpen(true)} style={{ border: 'none', background: 'white', color: 'var(--text-dark)', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-soft)' }}>
           <Menu size={20} />
         </button>
         <div style={{ fontWeight: '800', fontSize: '1rem', color: 'var(--text-dark)' }}>IPL Dashboard</div>
-        <button style={{ border: 'none', background: 'var(--gradient-gold)', color: 'white', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)', position: 'relative' }}>
+        <button onClick={() => setIsNotificationOpen(true)} style={{ border: 'none', background: 'var(--gradient-gold)', color: 'white', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)', position: 'relative' }}>
           <Bell size={20} />
-          <span style={{ position: 'absolute', top: '8px', right: '8px', width: '8px', height: '8px', background: '#fff', borderRadius: '50%', border: '2px solid #ea580c' }}></span>
+          {adminMessage && <span style={{ position: 'absolute', top: '8px', right: '8px', width: '8px', height: '8px', background: '#fff', borderRadius: '50%', border: '2px solid #ea580c' }}></span>}
         </button>
       </header>
 
@@ -224,9 +318,43 @@ const DashboardPage = () => {
           </div>
         </div>
         
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '4px', fontWeight: '600' }}>Account Balance</div>
-          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>Rs0.00</div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '4px', fontWeight: '600' }}>Account Balance</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>Rs{calculatedBalance.toLocaleString()}</div>
+          </div>
+          {activePlan && activePlan !== 'None' ? (
+            <div style={{ 
+              background: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', 
+              color: '#78350f', 
+              padding: '6px 14px', 
+              borderRadius: '20px', 
+              fontSize: '0.85rem', 
+              fontWeight: '900',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(255,255,255,0.4)',
+              marginBottom: '6px'
+            }}>
+              <CheckCircle size={14} />
+              {activePlan}
+            </div>
+          ) : (
+            <div style={{ 
+              background: 'rgba(0,0,0,0.2)', 
+              color: 'white', 
+              padding: '6px 14px', 
+              borderRadius: '20px', 
+              fontSize: '0.8rem', 
+              fontWeight: '700',
+              marginBottom: '6px',
+              backdropFilter: 'blur(4px)'
+            }}>
+              No Active Plan
+            </div>
+          )}
         </div>
       </div>
 
@@ -248,14 +376,25 @@ const DashboardPage = () => {
             <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dark)' }}>Withdraw</span>
           </div>
         </Link>
-        <Link to="/my-task" style={{ textDecoration: 'none' }}>
-          <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 10px', gap: '8px', border: '1px solid rgba(217,119,6,0.2)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ClipboardList size={20} />
+        {(!activePlan || activePlan === 'None') ? (
+          <Link to="/plans" style={{ textDecoration: 'none' }}>
+            <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 10px', gap: '8px', border: '1px solid rgba(217,119,6,0.2)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={20} />
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dark)' }}>See Plans</span>
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dark)' }}>My Task</span>
-          </div>
-        </Link>
+          </Link>
+        ) : (
+          <Link to="/my-task" style={{ textDecoration: 'none' }}>
+            <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 10px', gap: '8px', border: '1px solid rgba(217,119,6,0.2)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ClipboardList size={20} />
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dark)' }}>My Task</span>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Referral Link */}
@@ -263,11 +402,11 @@ const DashboardPage = () => {
         <div style={{ overflow: 'hidden' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600' }}>Referral Link</div>
           <div style={{ fontSize: '0.85rem', color: '#d97706', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            {window.location.origin}/register?ref={user.id || user.username || 'guest_user'}
+            {window.location.origin}/register?ref={user.username || user.id || 'guest_user'}
           </div>
         </div>
-        <button style={{ border: 'none', background: 'var(--gradient-gold)', padding: '10px', borderRadius: '10px', color: 'white', cursor: 'pointer', marginLeft: '12px', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.2)' }}>
-          <Copy size={18} />
+        <button onClick={handleCopyLink} style={{ border: 'none', background: copied ? '#10b981' : 'var(--gradient-gold)', padding: '10px', borderRadius: '10px', color: 'white', cursor: 'pointer', marginLeft: '12px', boxShadow: copied ? '0 4px 10px rgba(16, 185, 129, 0.2)' : '0 4px 10px rgba(234, 88, 12, 0.2)', transition: 'all 0.3s' }}>
+          {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
         </button>
       </div>
 
@@ -294,14 +433,14 @@ const DashboardPage = () => {
             </div>
           </a>
 
-          <a href={`https://${homeConfig.telegramChannel}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link to="/support-tickets" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 8px', gap: '8px', textAlign: 'center', background: 'white' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {homeConfig.telegramIcon ? <img src={homeConfig.telegramIcon} alt="Icon" style={{width: '20px', height: '20px', objectFit: 'contain'}} /> : <MessageSquare size={20} />}
+                <Headset size={20} />
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: '700', lineHeight: 1.2 }}>Telegram<br/>Channel</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: '700', lineHeight: 1.2 }}>Support<br/>Ticket</span>
             </div>
-          </a>
+          </Link>
 
         </div>
       </div>
@@ -313,7 +452,9 @@ const DashboardPage = () => {
             { name: 'Deposit History', icon: <FileText size={24} />, color: '#d97706', route: '/deposit-history' },
             { name: 'Withdraw History', icon: <FileText size={24} />, color: '#ea580c', route: '/withdraw-history' },
             { name: 'Transaction', icon: <Activity size={24} />, color: '#d97706', route: '/transaction' },
-            { name: 'My Task', icon: <ClipboardList size={24} />, color: '#ea580c', route: '/my-task' },
+            (!user.plan || user.plan === 'None') 
+              ? { name: 'See Plans', icon: <Activity size={24} />, color: '#ea580c', route: '/plans' }
+              : { name: 'My Task', icon: <ClipboardList size={24} />, color: '#ea580c', route: '/my-task' },
             { name: 'My Team', icon: <Users size={24} />, color: '#d97706', route: '/team' },
             { name: 'App Download', icon: <Smartphone size={24} />, color: '#ea580c', route: '/app-download' },
             { name: 'Verified', icon: <ShieldCheck size={24} />, color: '#10b981', route: '/verified' }
@@ -332,14 +473,14 @@ const DashboardPage = () => {
       {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {[
-          { label: 'Cash Balance', value: 'Rs0.00', icon: <Wallet size={20} color="#d97706" />, bg: '#fef3c7' },
-          { label: 'Total Deposit', value: 'Rs0.00', icon: <Download size={20} color="#ea580c" />, bg: '#ffedd5' },
-          { label: 'Total Withdraw', value: 'Rs0.00', icon: <Upload size={20} color="#d97706" />, bg: '#fef3c7' },
-          { label: 'Pending Deposit', value: 'Rs0.00', icon: <Activity size={20} color="#ea580c" />, bg: '#ffedd5' },
-          { label: 'Pending Withdraw', value: 'Rs0.00', icon: <Activity size={20} color="#d97706" />, bg: '#fef3c7' },
+          { label: 'Cash Balance', value: `Rs${calculatedBalance.toLocaleString()}`, icon: <Wallet size={20} color="#d97706" />, bg: '#fef3c7' },
+          { label: 'Total Deposit', value: `Rs${stats.totalDeposit.toLocaleString()}`, icon: <Download size={20} color="#ea580c" />, bg: '#ffedd5' },
+          { label: 'Total Withdraw', value: `Rs${stats.totalWithdraw.toLocaleString()}`, icon: <Upload size={20} color="#d97706" />, bg: '#fef3c7' },
+          { label: 'Pending Deposit', value: `Rs${stats.pendingDeposit.toLocaleString()}`, icon: <Activity size={20} color="#ea580c" />, bg: '#ffedd5' },
+          { label: 'Pending Withdraw', value: `Rs${stats.pendingWithdraw.toLocaleString()}`, icon: <Activity size={20} color="#d97706" />, bg: '#fef3c7' },
           { label: 'Total Team', value: '0', icon: <Users2 size={20} color="#ea580c" />, bg: '#ffedd5' },
-          { label: 'Team Investment', value: 'Rs0.00', icon: <BarChart3 size={20} color="#d97706" />, bg: '#fef3c7' },
-          { label: 'Team Commission', value: 'Rs0.00', icon: <TrendingUp size={20} color="#ea580c" />, bg: '#ffedd5' }
+          { label: 'Team Investment', value: 'Rs0', icon: <BarChart3 size={20} color="#d97706" />, bg: '#fef3c7' },
+          { label: 'Team Commission', value: 'Rs0', icon: <TrendingUp size={20} color="#ea580c" />, bg: '#ffedd5' }
         ].map((item, i) => (
           <div key={i} className="glass-card" style={{ padding: '16px', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -352,6 +493,106 @@ const DashboardPage = () => {
           </div>
         ))}
       </div>
+
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex' }} onClick={() => setIsSidebarOpen(false)}>
+          <div style={{ width: '280px', background: 'white', height: '100%', padding: '20px', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gradient-gold)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserCircle size={24} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: 'var(--text-dark)' }}>{user.name || 'Member'}</h3>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user.email || 'N/A'}</div>
+                </div>
+              </div>
+              <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#6b7280', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+              <Link to="/profile" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#f8fafc' }}>
+                <UserCircle size={18} color="#d97706" /> Profile Settings
+              </Link>
+              <Link to="/change-password" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#f8fafc' }}>
+                <Key size={18} color="#d97706" /> Change Password
+              </Link>
+              <Link to="/deposit-history" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#f8fafc' }}>
+                <FileText size={18} color="#d97706" /> Deposit History
+              </Link>
+              <Link to="/withdraw-history" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#f8fafc' }}>
+                <FileText size={18} color="#d97706" /> Withdraw History
+              </Link>
+              <Link to="/payment-methods" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#f8fafc' }}>
+                <Wallet size={18} color="#d97706" /> Payment Methods
+              </Link>
+              
+              <div style={{ height: '1px', background: '#e2e8f0', margin: '10px 0' }}></div>
+              
+              <button onClick={handleLogout} style={{ border: 'none', color: '#dc2626', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', background: '#fef2f2', cursor: 'pointer', textAlign: 'left' }}>
+                <LogOut size={18} color="#dc2626" /> Logout
+              </button>
+            </div>
+            
+            <div style={{ marginTop: 'auto', paddingTop: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem', fontWeight: '600' }}>
+              IPL Growth App
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {isNotificationOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setIsNotificationOpen(false)}>
+          <div style={{ width: '100%', maxWidth: '340px', background: 'white', borderRadius: '24px', padding: '24px', position: 'relative', animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bell size={24} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-dark)' }}>Notifications</h3>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Important updates & alerts</div>
+              </div>
+            </div>
+
+            {adminMessage ? (
+              <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '16px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', color: '#1f2937', fontWeight: '800' }}>{adminMessage.title}</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.5' }}>{adminMessage.text}</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px 10px' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#94a3b8' }}>
+                  <Bell size={30} />
+                </div>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--text-dark)', fontWeight: '800' }}>No New Notifications</h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>You're all caught up! Check back later for updates.</p>
+              </div>
+            )}
+
+            <button onClick={() => setIsNotificationOpen(false)} style={{ width: '100%', marginTop: '24px', padding: '14px', background: 'var(--gradient-gold)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Message Modal */}
+      {approvalMessage && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '24px', padding: '30px 24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: '64px', height: '64px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <CheckCircle size={32} color="#16a34a" />
+            </div>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-dark)' }}>Congratulations!</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: '1.5', fontWeight: '600' }}>{approvalMessage}</p>
+            <button onClick={() => setApprovalMessage(null)} style={{ width: '100%', padding: '14px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer' }}>
+              Awesome!
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

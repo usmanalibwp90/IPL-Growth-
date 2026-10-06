@@ -8,7 +8,15 @@ const ManageUsers = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingUser, setEditingUser] = useState(null);
 
+  const [userPlansMap, setUserPlansMap] = useState({});
+  const [profits, setProfits] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+
   useEffect(() => {
+    setUserPlansMap(JSON.parse(localStorage.getItem('user_plans_map') || '{}'));
+    setProfits(JSON.parse(localStorage.getItem('ipl_transactions') || '[]'));
+    setWithdrawals(JSON.parse(localStorage.getItem('withdraw_history') || '[]'));
+    
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     fetch(`${API_BASE_URL}/api/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -207,7 +215,27 @@ const ManageUsers = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length > 0 ? filteredUsers.map((user, i) => (
+              {filteredUsers.length > 0 ? filteredUsers.map((user, i) => {
+                
+                // Calculate dynamic balance for this user
+                let dynamicBal = Number(user?.balance || 0);
+                
+                withdrawals.forEach(w => {
+                  if (w.userId === user.id || w.userId === user.email || w.user === user.name) {
+                    dynamicBal -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+                  }
+                });
+                
+                profits.forEach(p => {
+                  // Check userId, email, or user name for matching local transactions
+                  if (!p.userId || p.userId === user.id || p.userId === user.email || p.user === user.name) {
+                    dynamicBal += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+                  }
+                });
+                
+                const activePlan = userPlansMap[user.id] || userPlansMap[user.email] || user.plan || 'None';
+
+                return (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
                   <td style={{ padding: '18px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -232,10 +260,10 @@ const ManageUsers = () => {
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '18px 24px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {Number(user?.balance || 0).toLocaleString()}</td>
+                  <td style={{ padding: '18px 24px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {dynamicBal.toLocaleString()}</td>
                   <td style={{ padding: '18px 24px' }}>
-                    <span style={{ padding: '6px 12px', background: user.plan !== 'None' ? '#fef3c7' : '#f1f5f9', color: user.plan !== 'None' ? '#d97706' : '#64748b', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800' }}>
-                      {user.plan}
+                    <span style={{ padding: '6px 12px', background: activePlan !== 'None' ? '#fef3c7' : '#f1f5f9', color: activePlan !== 'None' ? '#d97706' : '#64748b', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800' }}>
+                      {activePlan}
                     </span>
                   </td>
                   <td style={{ padding: '18px 24px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user.joined}</td>
@@ -286,7 +314,7 @@ const ManageUsers = () => {
                     </div>
                   </td>
                 </tr>
-              )) : (
+              )}) : (
                 <tr>
                   <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: '600' }}>No users found matching your search.</td>
                 </tr>

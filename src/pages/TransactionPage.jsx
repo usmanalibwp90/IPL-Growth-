@@ -5,13 +5,42 @@ import { useNavigate } from 'react-router-dom';
 const TransactionPage = () => {
   const navigate = useNavigate();
 
-  // Dummy transaction data combining different types
-  const historyData = [
-    { id: 'TRX-90123', type: 'Deposit', gateway: 'Easypaisa', amount: 'Rs5,000', date: 'Oct 03, 2026', time: '14:30', status: 'Success' },
-    { id: 'TRX-88214', type: 'Plan Purchase', gateway: 'Account Balance', amount: 'Rs1,625', date: 'Oct 03, 2026', time: '15:10', status: 'Success' },
-    { id: 'TRX-44122', type: 'Withdraw', gateway: 'JazzCash', amount: 'Rs1,500', date: 'Oct 02, 2026', time: '09:15', status: 'Pending' },
-    { id: 'TRX-10294', type: 'Daily Earning', gateway: 'Plan 3', amount: 'Rs406', date: 'Oct 01, 2026', time: '00:01', status: 'Success' },
-  ];
+  const [historyData, setHistoryData] = React.useState([]);
+
+  React.useEffect(() => {
+    const deps = JSON.parse(localStorage.getItem('deposit_history') || '[]').map(d => ({ ...d, type: 'Deposit', gateway: d.gateway || d.method }));
+    const wids = JSON.parse(localStorage.getItem('withdraw_history') || '[]').map(w => ({ ...w, type: 'Withdraw', gateway: w.gateway || w.method }));
+    
+    // MyTask daily earning stores the actual timestamp in 'date' and the exact amount in 'amount'
+    // Actually, `ipl_transactions` is an array of objects: { id, type: 'profit', amount, date: timestamp, status: 'completed' }
+    const tasks = JSON.parse(localStorage.getItem('ipl_transactions') || '[]').map(t => {
+      const dt = new Date(t.date);
+      return { 
+        id: t.id ? `TRX-${t.id.toString().slice(-6)}` : 'TRX-XXXXXX',
+        type: 'Daily Earning',
+        gateway: 'My Task',
+        amount: `Rs${t.amount}`,
+        date: dt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        time: dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        status: t.status === 'completed' ? 'Success' : 'Pending',
+        timestamp: t.date
+      }
+    });
+
+    // We can compute timestamps for deps and wids to sort them
+    const parseDateTime = (d) => {
+      try {
+        return new Date(`${d.date} ${d.time}`).getTime();
+      } catch (e) {
+        return 0;
+      }
+    };
+    deps.forEach(d => d.timestamp = parseDateTime(d));
+    wids.forEach(w => w.timestamp = parseDateTime(w));
+
+    const combined = [...deps, ...wids, ...tasks].sort((a, b) => b.timestamp - a.timestamp);
+    setHistoryData(combined);
+  }, []);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -35,20 +64,38 @@ const TransactionPage = () => {
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto' }}>
       
       {/* Top Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-        <div onClick={() => navigate(-1)} style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
-           <ArrowLeft size={20} color="var(--text-dark)" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div onClick={() => navigate(-1)} style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+             <ArrowLeft size={20} color="var(--text-dark)" />
+          </div>
+          <div>
+             <h1 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '800' }}>Transactions</h1>
+             <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Your complete account history</p>
+          </div>
         </div>
-        <div>
-           <h1 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '800' }}>Transactions</h1>
-           <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Your complete account history</p>
-        </div>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('deposit_history');
+            localStorage.removeItem('withdraw_history');
+            localStorage.removeItem('ipl_transactions');
+            window.location.reload();
+          }}
+          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+        >
+          Clear
+        </button>
       </div>
 
       {/* Transactions List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         
-        {historyData.map((item, index) => {
+        {historyData.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px 20px', background: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+            <Clock size={40} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '600' }}>No transactions found.</div>
+          </div>
+        ) : historyData.map((item, index) => {
           const statusStyle = getStatusColor(item.status);
           const typeStyle = getTypeStyle(item.type);
           const isPositive = typeStyle.prefix === '+';
@@ -65,17 +112,17 @@ const TransactionPage = () => {
                     {item.type}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                    <Calendar size={12} /> {item.date} • {item.gateway}
+                    <Calendar size={12} /> {item.date} • {item.gateway || item.method || 'System'}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600', marginTop: '2px' }}>
-                    TRX: {item.id}
+                    TRX: {item.id || item.transactionId || 'N/A'}
                   </div>
                 </div>
               </div>
 
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '1rem', fontWeight: '900', color: isPositive ? '#16a34a' : 'var(--text-dark)', marginBottom: '6px' }}>
-                  {typeStyle.prefix}{item.amount}
+                  {typeStyle.prefix}{String(item.amount).startsWith('Rs') ? item.amount : `Rs${item.amount}`}
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: statusStyle.bg, color: statusStyle.text, padding: '4px 8px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800' }}>
                   {statusStyle.icon} {item.status}

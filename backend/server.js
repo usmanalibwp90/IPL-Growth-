@@ -27,13 +27,30 @@ const db = new sqlite3.Database(dbPath, (err) => {
       plan TEXT DEFAULT 'None',
       status TEXT DEFAULT 'Active',
       joined TEXT NOT NULL
-    )`, (err) => {
-      if (err) {
-        console.error('Error creating users table:', err.message);
-      } else {
-        console.log('Users table ready.');
-      }
-    });
+    )`);
+
+    // Create Support Tickets Table
+    db.run(`CREATE TABLE IF NOT EXISTS tickets (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      userName TEXT,
+      userEmail TEXT,
+      subject TEXT NOT NULL,
+      category TEXT NOT NULL,
+      priority TEXT NOT NULL,
+      status TEXT DEFAULT 'Open',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`);
+
+    // Create Ticket Replies Table
+    db.run(`CREATE TABLE IF NOT EXISTS ticket_replies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticketId TEXT NOT NULL,
+      sender TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`);
   }
 });
 
@@ -158,6 +175,102 @@ app.delete('/api/users/:id', (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json({ message: 'User deleted successfully' });
+  });
+});
+
+// --- SUPPORT TICKETS API ---
+
+// Create a new ticket
+app.post('/api/tickets', (req, res) => {
+  const { userId, userName, userEmail, subject, category, priority, message } = req.body;
+  if (!userId || !subject || !category || !message) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Generate a ticket ID
+  const num = Math.floor(1000 + Math.random() * 9000);
+  const ticketId = `#IPL-${num}`;
+  const now = new Date().toISOString();
+
+  const query = `INSERT INTO tickets (id, userId, userName, userEmail, subject, category, priority, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?)`;
+  
+  db.run(query, [ticketId, userId, userName, userEmail, subject, category, priority, now, now], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error creating ticket' });
+
+    // Insert the first message as a reply
+    db.run(`INSERT INTO ticket_replies (ticketId, sender, message, created_at) VALUES (?, 'user', ?, ?)`, [ticketId, message, now], function(err2) {
+      if (err2) return res.status(500).json({ error: 'Database error adding ticket message' });
+      res.status(201).json({ message: 'Ticket created', ticketId });
+    });
+  });
+});
+
+// Get user tickets
+app.get('/api/tickets/user/:userId', (req, res) => {
+  const { userId } = req.params;
+  db.all(`SELECT * FROM tickets WHERE userId = ? ORDER BY updated_at DESC`, [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+});
+
+// Get all tickets (admin)
+app.get('/api/tickets', (req, res) => {
+  db.all(`SELECT * FROM tickets ORDER BY updated_at DESC`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+});
+
+// Get single ticket details + replies
+app.get('/api/tickets/:id', (req, res) => {
+  const { id } = req.params;
+  db.get(`SELECT * FROM tickets WHERE id = ?`, [id], (err, ticket) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    db.all(`SELECT * FROM ticket_replies WHERE ticketId = ? ORDER BY created_at ASC`, [id], (err2, replies) => {
+      if (err2) return res.status(500).json({ error: 'Database error fetching replies' });
+      res.json({ ticket, replies });
+    });
+  });
+});
+
+// Add reply
+app.post('/api/tickets/:id/reply', (req, res) => {
+  const { id } = req.params;
+  const { sender, message } = req.body; // sender should be 'user' or 'admin'
+  const now = new Date().toISOString();
+
+  if (!message) return res.status(400).json({ error: 'Message is required' });
+
+  db.run(`INSERT INTO ticket_replies (ticketId, sender, message, created_at) VALUES (?, ?, ?, ?)`, [id, sender, message, now], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    // Update ticket's updated_at. Also, if sender is admin, might want to change status? Wait, leave status update to explicit PUT.
+    let statusUpdate = "";
+    let params = [now, id];
+    
+    // If user replies, and ticket was Waiting for User, change to Open/In Progress. 
+    // Or just let admin handle status manually. 
+    // We'll just update updated_at.
+    db.run(`UPDATE tickets SET updated_at = ? WHERE id = ?`, params, (err2) => {
+      res.status(201).json({ message: 'Reply added' });
+    });
+  });
+});
+
+// Update ticket status/priority
+app.put('/api/tickets/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, priority } = req.body;
+  const now = new Date().toISOString();
+
+  db.run(`UPDATE tickets SET status = COALESCE(?, status), priority = COALESCE(?, priority), updated_at = ? WHERE id = ?`, 
+    [status || null, priority || null, now, id], 
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json({ message: 'Ticket updated' });
   });
 });
 
