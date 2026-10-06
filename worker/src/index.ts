@@ -34,6 +34,23 @@ app.post('/api/register', async (c) => {
   }
 
   const normalizedEmail = email.toLowerCase().trim();
+  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+  if (!gmailRegex.test(normalizedEmail)) {
+    return c.json({ error: 'Only valid @gmail.com addresses are allowed' }, 400);
+  }
+
+  const mobileRegex = /^\+92\d{10}$/;
+  if (!mobileRegex.test(mobile.trim())) {
+    return c.json({ error: 'Mobile number must start with +92 and contain exactly 10 digits' }, 400);
+  }
+
+  // Validate Password (min 8 chars, strong: letters and numbers)
+  if (!password || password.length < 8) {
+    return c.json({ error: 'Password must be at least 8 characters long' }, 400);
+  }
+  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+    return c.json({ error: 'Password must be strong and contain both letters and numbers' }, 400);
+  }
 
   try {
     const hashedPassword = await hashPassword(password);

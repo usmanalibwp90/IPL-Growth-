@@ -45,6 +45,26 @@ app.post('/api/register', (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  // Validate Gmail requirement
+  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+  if (!gmailRegex.test(email.trim())) {
+    return res.status(400).json({ error: 'Only valid @gmail.com addresses are allowed' });
+  }
+
+  // Validate Mobile (+92 followed by exactly 10 digits)
+  const mobileRegex = /^\+92\d{10}$/;
+  if (!mobileRegex.test(mobile.trim())) {
+    return res.status(400).json({ error: 'Mobile number must start with +92 and contain exactly 10 digits' });
+  }
+
+  // Validate Password (min 8 chars, strong: letters and numbers)
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+    return res.status(400).json({ error: 'Password must be strong and contain both letters and numbers' });
+  }
+
   const id = `USR-${Math.floor(100 + Math.random() * 900)}`;
   const joined = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
