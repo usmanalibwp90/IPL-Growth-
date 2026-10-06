@@ -45,12 +45,14 @@ const SupportTicketDetails = () => {
     setMessage('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/tickets/${encodeURIComponent('#' + id)}/reply`, {
+      const res = await fetch(`${API_BASE_URL}/api/tickets/${encodeURIComponent('#' + id)}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'user',
-          message: currentMsg
+          senderName: 'User',
+          text: currentMsg,
+          timestamp: new Date().toISOString()
         })
       });
       if (res.ok) {
@@ -126,7 +128,7 @@ const SupportTicketDetails = () => {
                 fontWeight: '500',
                 boxShadow: isUser ? '0 4px 10px rgba(217,119,6,0.2)' : '0 2px 5px rgba(0,0,0,0.02)'
               }}>
-                {reply.message}
+                {reply.text || reply.message}
               </div>
             </div>
           );

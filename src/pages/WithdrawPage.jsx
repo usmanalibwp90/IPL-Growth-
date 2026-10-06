@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const WithdrawPage = () => {
   const navigate = useNavigate();
@@ -13,61 +14,85 @@ const WithdrawPage = () => {
   const [calculatedBalance, setCalculatedBalance] = useState(0);
   
   useEffect(() => {
-    const saved = localStorage.getItem('withdraw_methods');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const active = parsed.filter(g => g.isActive).map(g => ({
-        id: g.id,
-        name: g.name,
-        icon: g.iconImage || (g.type === 'easypaisa' ? '/easypaisa.png' : g.type === 'jazzcash' ? '/jazzcash.png' : 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'),
-        min: `Rs${g.minLimit}.00`,
-        max: `Rs${Number(g.maxLimit).toLocaleString()}.00`,
-        fee: `Rs0.00 + ${g.charge}%`,
-        originalData: g
-      }));
-      setGateways(active);
-    } else {
-      setGateways([
-        { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 3, name: 'SADAPAY', icon: '/sadapay.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-      ]);
-    }
+    // Fetch gateways
+    fetch(`${API_BASE_URL}/api/gateways/withdraw`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const active = data.map(g => {
+            const parsedDetails = JSON.parse(g.details || '{}');
+            return {
+              id: g.id,
+              name: g.name,
+              icon: parsedDetails.iconImage || (g.name.toLowerCase().includes('easypaisa') ? '/easypaisa.png' : g.name.toLowerCase().includes('jazzcash') ? '/jazzcash.png' : 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'),
+              min: `Rs${parsedDetails.minLimit || 10}.00`,
+              max: `Rs${Number(parsedDetails.maxLimit || 1000000).toLocaleString()}.00`,
+              fee: `Rs0.00 + ${parsedDetails.charge || 0}%`,
+              originalData: parsedDetails
+            };
+          });
+          setGateways(active);
+        } else {
+          setGateways([
+            { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 3, name: 'SADAPAY', icon: '/sadapay.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+          ]);
+        }
+      })
+      .catch(err => {
+          console.error("Failed to load gateways", err);
+          setGateways([
+            { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' }
+          ]);
+      });
 
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const rawUser = localStorage.getItem('user');
-    if (rawUser) {
+    if (rawUser && token) {
       const u = JSON.parse(rawUser);
       const userId = u.id || u.email;
-      let dynamicBalance = 0;
       
-      const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-      withdrawals.forEach(w => {
-         if (w.userId === userId || w.userId === u.email || w.user === u.name) {
+      // Fetch dynamic balance
+      Promise.all([
+        fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
+        fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
+      ])
+      .then(async ([withRes, transRes]) => {
+        let dynamicBalance = 0;
+        if (withRes.ok) {
+          const withdrawals = await withRes.json();
+          withdrawals.forEach(w => {
             dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
-         }
-      });
-      
-      const profits = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
-      profits.forEach(p => {
-         if (p.type === 'profit') {
-            if (!p.userId || p.userId === userId || p.userId === u.email || p.user === u.name) {
-               dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+          });
+        }
+        if (transRes.ok) {
+          const profits = await transRes.json();
+          profits.forEach(p => {
+            if (p.type === 'profit') {
+              dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
             }
-         }
-      });
-      
-      setCalculatedBalance(dynamicBalance);
+          });
+        }
+        setCalculatedBalance(dynamicBalance);
+      })
+      .catch(err => console.error("Failed to fetch balance stats", err));
     }
   }, []);
 
   const handleWithdrawSubmit = (e) => {
     e.preventDefault();
 
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
     const newTransaction = {
       id: `WID-${Math.floor(100000 + Math.random() * 900000)}`,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      userId: u.id || u.email,
+      user: u.name,
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + `, ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
       amount: withdrawAmount,
       method: selectedGateway.name,
       accountDetails: `${accountName} / ${accountNumber}`,
@@ -75,8 +100,11 @@ const WithdrawPage = () => {
       type: 'withdraw'
     };
 
-    const existingHistory = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-    localStorage.setItem('withdraw_history', JSON.stringify([newTransaction, ...existingHistory]));
+    fetch(`${API_BASE_URL}/api/withdrawals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(newTransaction)
+    }).catch(err => console.error('Failed to submit withdrawal', err));
 
     setToastMessage(`Withdrawal request of Rs${withdrawAmount} submitted successfully and is now Pending.`);
     

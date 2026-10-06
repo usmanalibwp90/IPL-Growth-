@@ -66,12 +66,14 @@ const AdminTicketDetails = () => {
     setMessage('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/tickets/${encodeURIComponent('#' + id)}/reply`, {
+      const res = await fetch(`${API_BASE_URL}/api/tickets/${encodeURIComponent('#' + id)}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'admin',
-          message: currentMsg
+          senderName: 'Support Team',
+          text: currentMsg,
+          timestamp: new Date().toISOString()
         })
       });
       if (res.ok) {
@@ -168,7 +170,7 @@ const AdminTicketDetails = () => {
                   lineHeight: '1.5',
                   boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
                 }}>
-                  {reply.message}
+                  {reply.text || reply.message}
                 </div>
               </div>
             );

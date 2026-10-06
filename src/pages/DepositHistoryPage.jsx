@@ -38,7 +38,7 @@ const DepositHistoryPage = () => {
     }
   }, []);
 
-  const totalDeposits = historyData.filter(d => d.status === 'Success').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
+  const totalDeposits = historyData.filter(d => d.status === 'Approved' || d.status === 'Success').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
   const pendingDeposits = historyData.filter(d => d.status === 'Pending').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
 
   const getStatusColor = (status) => {

@@ -14,10 +14,17 @@ const ManageUsers = () => {
 
   useEffect(() => {
     setUserPlansMap(JSON.parse(localStorage.getItem('user_plans_map') || '{}'));
-    setProfits(JSON.parse(localStorage.getItem('ipl_transactions') || '[]'));
-    setWithdrawals(JSON.parse(localStorage.getItem('withdraw_history') || '[]'));
-    
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    // Fetch global transactions and withdrawals
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_BASE_URL}/api/withdrawals`, { headers: { 'Authorization': `Bearer ${token}` } })
+    ]).then(async ([tRes, wRes]) => {
+      if(tRes.ok) setProfits(await tRes.json());
+      if(wRes.ok) setWithdrawals(await wRes.json());
+    }).catch(err => console.error(err));
+    
     fetch(`${API_BASE_URL}/api/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })

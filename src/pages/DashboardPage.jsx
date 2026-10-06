@@ -146,39 +146,51 @@ const DashboardPage = () => {
       }
 
       // Calculate real-time balance and stats
-      let dynamicBalance = 0;
-      let totalDeposit = 0;
-      let pendingDeposit = 0;
-      let totalWithdraw = 0;
-      let pendingWithdraw = 0;
+      // Fetch deposits, withdrawals, profits from backend for stats
+      try {
+        const [depRes, withRes, transRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/deposits/user/${userId}`),
+          fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
+          fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
+        ]);
+        
+        let dynamicBalance = 0;
+        let totalDeposit = 0;
+        let pendingDeposit = 0;
+        let totalWithdraw = 0;
+        let pendingWithdraw = 0;
 
-      const deposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-      deposits.forEach(d => {
-         if (d.userId === userId || d.userId === u.email || d.user === u.name) {
+        if (depRes.ok) {
+          const deposits = await depRes.json();
+          deposits.forEach((d) => {
             const amt = parseFloat(String(d.amount).replace(/[^0-9.-]+/g, '')) || 0;
             if (d.status === 'Approved') totalDeposit += amt;
             else if (d.status === 'Pending') pendingDeposit += amt;
-         }
-      });
-      
-      const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-      withdrawals.forEach(w => {
-         if (w.userId === userId || w.userId === u.email || w.user === u.name) {
+          });
+        }
+
+        if (withRes.ok) {
+          const withdrawals = await withRes.json();
+          withdrawals.forEach((w) => {
             const amt = parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
             if (w.status === 'Approved') totalWithdraw += amt;
             else if (w.status === 'Pending') pendingWithdraw += amt;
             dynamicBalance -= amt;
-         }
-      });
-      
-      const profits = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
-      profits.forEach(p => {
-         if (p.type === 'profit') {
-            if (!p.userId || p.userId === userId || p.userId === u.email || p.user === u.name) {
-               dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+          });
+        }
+
+        if (transRes.ok) {
+          const profits = await transRes.json();
+          profits.forEach((p) => {
+            if (p.type === 'profit') {
+              dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
             }
-         }
-      });
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch dynamic stats", e);
+      }
+
       
       setCalculatedBalance(dynamicBalance);
       setStats({

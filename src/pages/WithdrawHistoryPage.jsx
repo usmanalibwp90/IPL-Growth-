@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Clock, CheckCircle, XCircle, Upload, Calendar, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const WithdrawHistoryPage = () => {
   const navigate = useNavigate();
@@ -8,11 +9,23 @@ const WithdrawHistoryPage = () => {
   const [historyData, setHistoryData] = React.useState([]);
 
   React.useEffect(() => {
-    const data = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-    setHistoryData(data);
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      const userId = u.id || u.email;
+      
+      fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setHistoryData(data);
+          }
+        })
+        .catch(err => console.error("Failed to fetch withdraw history", err));
+    }
   }, []);
 
-  const totalPayouts = historyData.filter(d => d.status === 'Success').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
+  const totalPayouts = historyData.filter(d => d.status === 'Approved' || d.status === 'Success').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
   const pendingPayouts = historyData.filter(d => d.status === 'Pending').reduce((acc, curr) => acc + parseFloat(String(curr.amount || '0').replace(/[^0-9.]/g, '')), 0);
 
   const getStatusColor = (status) => {
@@ -40,8 +53,9 @@ const WithdrawHistoryPage = () => {
         </div>
         <button 
           onClick={() => {
-            localStorage.removeItem('withdraw_history');
-            window.location.reload();
+            if(window.confirm('Clear all withdrawal history? Note: Not implemented in backend yet.')) {
+              setHistoryData([]);
+            }
           }}
           style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
         >

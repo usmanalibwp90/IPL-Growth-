@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Clock, CheckCircle, ArrowDownRight, ArrowUpRight, Package, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const TransactionPage = () => {
   const navigate = useNavigate();
@@ -8,38 +9,46 @@ const TransactionPage = () => {
   const [historyData, setHistoryData] = React.useState([]);
 
   React.useEffect(() => {
-    const deps = JSON.parse(localStorage.getItem('deposit_history') || '[]').map(d => ({ ...d, type: 'Deposit', gateway: d.gateway || d.method }));
-    const wids = JSON.parse(localStorage.getItem('withdraw_history') || '[]').map(w => ({ ...w, type: 'Withdraw', gateway: w.gateway || w.method }));
-    
-    // MyTask daily earning stores the actual timestamp in 'date' and the exact amount in 'amount'
-    // Actually, `ipl_transactions` is an array of objects: { id, type: 'profit', amount, date: timestamp, status: 'completed' }
-    const tasks = JSON.parse(localStorage.getItem('ipl_transactions') || '[]').map(t => {
-      const dt = new Date(t.date);
-      return { 
-        id: t.id ? `TRX-${t.id.toString().slice(-6)}` : 'TRX-XXXXXX',
-        type: 'Daily Earning',
-        gateway: 'My Task',
-        amount: `Rs${t.amount}`,
-        date: dt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        time: dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        status: t.status === 'completed' ? 'Success' : 'Pending',
-        timestamp: t.date
-      }
-    });
+    const rawUser = localStorage.getItem('user');
+    if (!rawUser) return;
+    const u = JSON.parse(rawUser);
+    const userId = u.id || u.email;
 
-    // We can compute timestamps for deps and wids to sort them
-    const parseDateTime = (d) => {
-      try {
-        return new Date(`${d.date} ${d.time}`).getTime();
-      } catch (e) {
-        return 0;
-      }
-    };
-    deps.forEach(d => d.timestamp = parseDateTime(d));
-    wids.forEach(w => w.timestamp = parseDateTime(w));
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/deposits/user/${userId}`),
+      fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
+      fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
+    ])
+    .then(async ([depRes, widRes, trxRes]) => {
+      let deps = [];
+      let wids = [];
+      let trxs = [];
+      
+      if (depRes.ok) deps = await depRes.json();
+      if (widRes.ok) wids = await widRes.json();
+      if (trxRes.ok) trxs = await trxRes.json();
 
-    const combined = [...deps, ...wids, ...tasks].sort((a, b) => b.timestamp - a.timestamp);
-    setHistoryData(combined);
+      deps = deps.map(d => ({ ...d, type: 'Deposit', gateway: d.method || d.gateway, timestamp: new Date(d.date).getTime() || 0 }));
+      wids = wids.map(w => ({ ...w, type: 'Withdraw', gateway: w.method || w.gateway, timestamp: new Date(w.date).getTime() || 0 }));
+      
+      const tasks = trxs.map(t => {
+        const dt = new Date(t.date || new Date());
+        return { 
+          id: t.id,
+          type: t.type === 'profit' ? 'Daily Earning' : 'Plan Purchase',
+          gateway: t.type === 'profit' ? 'My Task' : 'System',
+          amount: `Rs${t.amount}`,
+          date: dt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          time: dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          status: 'Success', // transactions are always success currently
+          timestamp: new Date(t.date).getTime() || 0
+        }
+      });
+
+      const combined = [...deps, ...wids, ...tasks].sort((a, b) => b.timestamp - a.timestamp);
+      setHistoryData(combined);
+    })
+    .catch(err => console.error("Failed to fetch transactions", err));
   }, []);
 
   const getStatusColor = (status) => {
@@ -76,10 +85,9 @@ const TransactionPage = () => {
         </div>
         <button 
           onClick={() => {
-            localStorage.removeItem('deposit_history');
-            localStorage.removeItem('withdraw_history');
-            localStorage.removeItem('ipl_transactions');
-            window.location.reload();
+            if (window.confirm('Clearing history from backend is not yet supported. UI will be cleared.')) {
+              setHistoryData([]);
+            }
           }}
           style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
         >

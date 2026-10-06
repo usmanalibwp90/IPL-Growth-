@@ -96,12 +96,22 @@ const ManageDeposits = () => {
 
   const handleDelete = (id) => {
     if(window.confirm('Are you sure you want to delete this transaction?')) {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      // Update UI first
       const updated = deposits.filter(d => d.id !== id);
       setDeposits(updated);
       
+      // Update local cache
       const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
       const newStorage = saved.filter(t => t.id !== id);
       localStorage.setItem('deposit_history', JSON.stringify(newStorage));
+
+      // Call backend DELETE
+      fetch(`${API_BASE_URL}/api/deposits/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(err => console.error('Failed to delete on backend', err));
     }
   };
 

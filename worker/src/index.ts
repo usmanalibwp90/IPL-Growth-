@@ -158,11 +158,30 @@ app.get('/api/users', adminAuth, async (c) => {
 
 app.put('/api/users/:id', adminAuth, async (c) => {
   const id = c.req.param('id');
-  const { balance, plan, status } = await c.req.json();
+  const body = await c.req.json();
   try {
-    await c.env.DB.prepare(
-      `UPDATE users SET balance = ?, plan = ?, status = ? WHERE id = ?`
-    ).bind(balance, plan, status, id).run();
+    let updates = [];
+    let binds = [];
+    
+    if (body.balance !== undefined) {
+      updates.push('balance = ?');
+      binds.push(body.balance);
+    }
+    if (body.plan !== undefined) {
+      updates.push('plan = ?');
+      binds.push(body.plan);
+    }
+    if (body.status !== undefined) {
+      updates.push('status = ?');
+      binds.push(body.status);
+    }
+    
+    if (updates.length > 0) {
+      binds.push(id);
+      await c.env.DB.prepare(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
+      ).bind(...binds).run();
+    }
     return c.json({ message: 'User updated successfully' }, 200);
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
@@ -391,6 +410,273 @@ app.put('/api/deposits/:id', adminAuth, async (c) => {
     await c.env.DB.prepare(`UPDATE deposits SET status = ? WHERE id = ?`).bind(status, id).run();
     
     return c.json({ message: 'Deposit updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.delete('/api/deposits/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    await c.env.DB.prepare(`DELETE FROM deposits WHERE id = ?`).bind(id).run();
+    return c.json({ message: 'Deposit deleted' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// SUPPORT TICKETS API
+// ==========================================
+app.post('/api/tickets', async (c) => {
+  try {
+    const body = await c.req.json();
+    const id = body.id || `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+    const date = body.date || new Date().toISOString();
+    const status = body.status || 'Open';
+    const priority = body.priority || 'Normal';
+    const type = body.category || body.type || 'General';
+    const lastUpdate = body.lastUpdate || date;
+    const unread = body.unread ? 1 : 0;
+    
+    await c.env.DB.prepare(
+      `INSERT INTO tickets (id, userId, subject, date, status, priority, lastUpdate, type, unread) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, body.userId, body.subject, date, status, priority, lastUpdate, type, unread).run();
+    
+    // Also insert the first message as a reply if message is provided
+    if (body.message) {
+      await c.env.DB.prepare(
+        `INSERT INTO ticket_replies (ticketId, sender, senderName, text, timestamp) VALUES (?, ?, ?, ?, ?)`
+      ).bind(id, 'user', body.userName || 'User', body.message, date).run();
+    }
+    
+    return c.json({ message: 'Ticket created', id }, 201);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/tickets/user/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM tickets WHERE userId = ? ORDER BY date DESC`).bind(userId).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/tickets', adminAuth, async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM tickets ORDER BY date DESC`).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/tickets/:id', async (c) => {
+  const id = c.req.param('id');
+  try {
+    const ticket = await c.env.DB.prepare(`SELECT * FROM tickets WHERE id = ?`).bind(id).first();
+    if (!ticket) return c.json({ error: 'Not found' }, 404);
+    const { results: replies } = await c.env.DB.prepare(`SELECT * FROM ticket_replies WHERE ticketId = ? ORDER BY timestamp ASC`).bind(id).all();
+    return c.json({ ...ticket, replies });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.post('/api/tickets/:id/replies', async (c) => {
+  const ticketId = c.req.param('id');
+  try {
+    const { sender, senderName, text, timestamp } = await c.req.json();
+    await c.env.DB.prepare(`INSERT INTO ticket_replies (ticketId, sender, senderName, text, timestamp) VALUES (?, ?, ?, ?, ?)`).bind(ticketId, sender, senderName, text, timestamp).run();
+    await c.env.DB.prepare(`UPDATE tickets SET lastUpdate = ?, unread = 1 WHERE id = ?`).bind(timestamp, ticketId).run();
+    return c.json({ message: 'Reply added' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.put('/api/tickets/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const body = await c.req.json();
+    const updates = [];
+    const binds = [];
+    if (body.status !== undefined) { updates.push('status = ?'); binds.push(body.status); }
+    if (body.unread !== undefined) { updates.push('unread = ?'); binds.push(body.unread ? 1 : 0); }
+    if (updates.length > 0) {
+      binds.push(id);
+      await c.env.DB.prepare(`UPDATE tickets SET ${updates.join(', ')} WHERE id = ?`).bind(...binds).run();
+    }
+    return c.json({ message: 'Ticket updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// WITHDRAWALS API
+// ==========================================
+app.post('/api/withdrawals', async (c) => {
+  try {
+    const { id, userId, user, amount, method, accountDetails, date, status } = await c.req.json();
+    if (!userId || !amount || !method) return c.json({ error: 'Missing required fields' }, 400);
+
+    await c.env.DB.prepare(
+      `INSERT INTO withdrawals (id, userId, user, amount, method, accountDetails, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, userId, user, amount, method, accountDetails, date, status || 'Pending').run();
+
+    return c.json({ message: 'Withdrawal requested', id }, 201);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/withdrawals/user/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM withdrawals WHERE userId = ? ORDER BY date DESC`).bind(userId).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/withdrawals', adminAuth, async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM withdrawals ORDER BY date DESC`).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.put('/api/withdrawals/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const { status } = await c.req.json();
+    await c.env.DB.prepare(`UPDATE withdrawals SET status = ? WHERE id = ?`).bind(status, id).run();
+    return c.json({ message: 'Withdrawal updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.delete('/api/withdrawals/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    await c.env.DB.prepare(`DELETE FROM withdrawals WHERE id = ?`).bind(id).run();
+    return c.json({ message: 'Withdrawal deleted' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// TRANSACTIONS API
+// ==========================================
+app.post('/api/transactions', async (c) => {
+  try {
+    const { id, userId, user, type, amount, date, description } = await c.req.json();
+    await c.env.DB.prepare(
+      `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, userId, user, type, amount, date, description || '').run();
+    return c.json({ message: 'Transaction created', id }, 201);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/transactions/user/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM transactions WHERE userId = ? ORDER BY date DESC`).bind(userId).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/transactions', adminAuth, async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM transactions ORDER BY date DESC`).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// CERTIFICATES API
+// ==========================================
+app.get('/api/certificates/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  try {
+    const result = await c.env.DB.prepare(`SELECT * FROM certificates WHERE userId = ?`).bind(userId).first();
+    if (!result) return c.json({ status: 'Not Issued' });
+    return c.json(result);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.post('/api/certificates', adminAuth, async (c) => {
+  try {
+    const { userId, user, status, issueDate, certificateUrl } = await c.req.json();
+    await c.env.DB.prepare(
+      `INSERT INTO certificates (userId, user, status, issueDate, certificateUrl) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(userId) DO UPDATE SET status=excluded.status, issueDate=excluded.issueDate, certificateUrl=excluded.certificateUrl`
+    ).bind(userId, user, status, issueDate, certificateUrl).run();
+    return c.json({ message: 'Certificate saved' }, 201);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// SETTINGS / GATEWAYS API
+// ==========================================
+app.get('/api/settings', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM settings`).all();
+    const map: any = {};
+    results.forEach((r: any) => map[r.key] = r.value);
+    return c.json(map);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.put('/api/settings', adminAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    for (const [key, value] of Object.entries(body)) {
+       await c.env.DB.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).bind(key, value).run();
+    }
+    return c.json({ message: 'Settings updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/gateways/:type', async (c) => {
+  const type = c.req.param('type');
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM payment_gateways WHERE type = ?`).bind(type).all();
+    return c.json(results);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.post('/api/gateways', adminAuth, async (c) => {
+  try {
+    const { type, name, details } = await c.req.json();
+    await c.env.DB.prepare(`INSERT INTO payment_gateways (type, name, details) VALUES (?, ?, ?)`).bind(type, name, details).run();
+    return c.json({ message: 'Gateway added' });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

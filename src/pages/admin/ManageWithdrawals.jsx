@@ -1,54 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const ManageWithdrawals = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('withdraw_history');
-    let parsed = [];
-    if (saved) {
-      parsed = JSON.parse(saved).filter(t => t.type === 'withdraw').map(t => ({
-        id: t.id,
-        user: t.accountDetails ? t.accountDetails.split(' / ')[0] : 'Unknown User',
-        amount: Number(t.amount) || 0,
-        method: t.method,
-        account: t.accountDetails ? t.accountDetails.split(' / ')[1] : t.accountDetails || 'N/A',
-        date: t.date,
-        status: t.status
-      }));
-    }
-    
-    setWithdrawals(parsed);
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/api/withdrawals`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const parsed = data.map(t => ({
+            id: t.id,
+            user: t.user || 'Unknown User',
+            amount: Number(t.amount) || 0,
+            method: t.method,
+            account: t.accountDetails || 'N/A',
+            date: t.date,
+            status: t.status
+          }));
+          setWithdrawals(parsed);
+        }
+      })
+      .catch(err => console.error('Failed to fetch withdrawals', err));
   }, []);
 
   const handleApprove = (id) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const updated = withdrawals.map(w => w.id === id ? { ...w, status: 'Approved' } : w);
     setWithdrawals(updated);
-    
-    const saved = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-    const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Approved' } : t);
-    localStorage.setItem('withdraw_history', JSON.stringify(newStorage));
+
+    fetch(`${API_BASE_URL}/api/withdrawals/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ status: 'Approved' })
+    }).catch(err => console.error('Failed to update withdrawal', err));
   };
 
   const handleReject = (id) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const updated = withdrawals.map(w => w.id === id ? { ...w, status: 'Rejected' } : w);
     setWithdrawals(updated);
-    
-    const saved = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-    const newStorage = saved.map(t => t.id === id ? { ...t, status: 'Rejected' } : t);
-    localStorage.setItem('withdraw_history', JSON.stringify(newStorage));
+
+    fetch(`${API_BASE_URL}/api/withdrawals/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ status: 'Rejected' })
+    }).catch(err => console.error('Failed to update withdrawal', err));
   };
 
   const handleDelete = (id) => {
     if(window.confirm('Are you sure you want to delete this withdrawal?')) {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
       const updated = withdrawals.filter(w => w.id !== id);
       setWithdrawals(updated);
       
-      const saved = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-      const newStorage = saved.filter(t => t.id !== id);
-      localStorage.setItem('withdraw_history', JSON.stringify(newStorage));
+      fetch(`${API_BASE_URL}/api/withdrawals/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(err => console.error('Failed to delete withdrawal', err));
     }
   };
 
@@ -66,8 +81,7 @@ const ManageWithdrawals = () => {
         </div>
         <button 
           onClick={() => {
-            if(window.confirm('Kya aap waqai tamam withdrawal data delete karna chahte hain?')) {
-              localStorage.removeItem('withdraw_history');
+            if(window.confirm('Backend delete is not fully implemented yet, but UI will clear.')) {
               setWithdrawals([]);
             }
           }}
@@ -137,7 +151,7 @@ const ManageWithdrawals = () => {
                           </button>
                         </>
                       )}
-                      <button onClick={() => handleDelete(w.id)} style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer' }} title="Delete">
+                      <button onClick={() => handleDelete(req.id)} style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer' }} title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </div>
