@@ -94,12 +94,31 @@ const MobileAppLayout = () => {
       const user = JSON.parse(rawUser);
       setBlockedUser(user);
 
+      // Check localStorage first
+      if (user.status === 'Blocked') {
+        setIsBlocked(true);
+        return;
+      }
+      const blockedList = JSON.parse(localStorage.getItem('blocked_user_ids') || '[]');
+      if (user.id && blockedList.includes(user.id)) {
+        setIsBlocked(true);
+        return;
+      }
+      const adminCache = JSON.parse(localStorage.getItem('admin_users_cache') || '[]');
+      const found = adminCache.find(x => x.id === user.id || (x.email && x.email === user.email));
+      if (found && found.status === 'Blocked') {
+        setIsBlocked(true);
+        return;
+      }
+
       // Check with backend
       const res = await fetch(`${API_BASE_URL}/api/user/status?id=${encodeURIComponent(user.id || '')}&email=${encodeURIComponent(user.email || '')}`);
       if (res.ok) {
         const data = await res.json();
         if (data.status === 'Blocked') {
           setIsBlocked(true);
+          user.status = 'Blocked';
+          localStorage.setItem('user', JSON.stringify(user));
         } else {
           setIsBlocked(false);
         }
@@ -111,15 +130,13 @@ const MobileAppLayout = () => {
 
   React.useEffect(() => {
     checkUserStatus();
-    const interval = setInterval(checkUserStatus, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkUserStatus, 1500);
+    window.addEventListener('storage', checkUserStatus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkUserStatus);
+    };
   }, [checkUserStatus, location.pathname]);
-
-  const handleManualCheck = async () => {
-    setCheckingStatus(true);
-    await checkUserStatus();
-    setTimeout(() => setCheckingStatus(false), 500);
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -141,19 +158,19 @@ const MobileAppLayout = () => {
         </div>
         
         <span style={{ background: '#fecaca', color: '#991b1b', fontSize: '0.72rem', fontWeight: '800', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px' }}>
-          Account Suspended
+          Notification: Account Blocked
         </span>
 
         <h1 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#111827', margin: '0 0 10px 0' }}>
-          Aap Ka Account Block Hai
+          Aap Ko Website Ne Block Kar Diya Hai
         </h1>
 
         <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', maxWidth: '330px', margin: '0 auto 22px auto' }}>
-          Aap ko website ne block kar diya hai. Aap ki ID tab tak open nahi ho sakti jab tak admin panel se status dobara <b>Active</b> na kar diya jaye.
+          Aap ka account admin panel se suspend / block kar diya gaya hai. Aap ka account tab tak open nahi ho sakta jab tak admin panel se status dobara <b>Active</b> na kiya jaye.
         </p>
 
         <div style={{ background: 'white', border: '1px solid #fee2e2', borderRadius: '18px', padding: '16px 20px', width: '100%', maxWidth: '320px', marginBottom: '24px', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: '800', textTransform: 'uppercase' }}>User Profile Details</div>
+          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>User Profile Details</div>
           <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', marginTop: '4px' }}>{blockedUser?.name || 'Member'}</div>
           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>{blockedUser?.email}</div>
           {blockedUser?.mobile && <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: '700', marginTop: '2px' }}>{blockedUser?.mobile}</div>}
@@ -162,20 +179,27 @@ const MobileAppLayout = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '320px' }}>
-          <button 
-            onClick={handleManualCheck}
-            disabled={checkingStatus}
-            style={{ width: '100%', padding: '14px', background: 'var(--gradient-gold)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)', opacity: checkingStatus ? 0.7 : 1 }}
-          >
-            {checkingStatus ? 'Checking Status...' : 'Check Status Again (Refresh)'}
-          </button>
-
+        <div style={{ width: '100%', maxWidth: '320px' }}>
           <button 
             onClick={handleLogout}
-            style={{ width: '100%', padding: '14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '14px', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '16px',
+              fontWeight: '800',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              boxShadow: '0 8px 20px rgba(220, 38, 38, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
           >
-            Logout / Bahar Niklein
+            <Ban size={18} /> Logout Account
           </button>
         </div>
       </div>

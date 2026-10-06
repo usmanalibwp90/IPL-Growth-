@@ -16,14 +16,18 @@ const ManageUsers = () => {
       .then(res => res.json())
       .then(data => {
         console.log("Users API response:", data);
+        let userList = [];
         if (Array.isArray(data)) {
-          setUsers(data);
+          userList = data;
         } else if (data.users && Array.isArray(data.users)) {
-          setUsers(data.users);
-        } else {
-          console.error("Users API response is not an array:", data);
-          setUsers([]);
+          userList = data.users;
         }
+        setUsers(userList);
+        
+        // Cache blocked users in localStorage
+        const blocked = userList.filter(u => u.status === 'Blocked').map(u => u.id);
+        localStorage.setItem('blocked_user_ids', JSON.stringify(blocked));
+        localStorage.setItem('admin_users_cache', JSON.stringify(userList));
       })
       .catch(err => console.error("Users fetch error:", err));
   }, []);
@@ -72,6 +76,24 @@ const ManageUsers = () => {
     const user = users.find(u => u.id === id);
     const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
     
+    // Update local state
+    const updatedUsers = users.map(u => u.id === id ? { ...u, status: newStatus } : u);
+    setUsers(updatedUsers);
+
+    // Save blocked status to localStorage immediately
+    const blocked = updatedUsers.filter(u => u.status === 'Blocked').map(u => u.id);
+    localStorage.setItem('blocked_user_ids', JSON.stringify(blocked));
+    localStorage.setItem('admin_users_cache', JSON.stringify(updatedUsers));
+
+    // Update logged-in user in localStorage if matching
+    const currentLoggedIn = JSON.parse(localStorage.getItem('user') || '{}');
+    if (currentLoggedIn && (currentLoggedIn.id === id || currentLoggedIn.email === user?.email)) {
+      currentLoggedIn.status = newStatus;
+      localStorage.setItem('user', JSON.stringify(currentLoggedIn));
+    }
+    localStorage.setItem('user_status_changed_at', Date.now().toString());
+    window.dispatchEvent(new Event('storage'));
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
         method: 'PUT',
@@ -83,7 +105,6 @@ const ManageUsers = () => {
       });
       
       if (res.ok) {
-        setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
         alert(`User status badal kar "${newStatus}" kar diya gaya hai.`);
       } else {
         alert('Failed to change user status');
