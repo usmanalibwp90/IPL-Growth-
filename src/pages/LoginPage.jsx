@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, Shield, Key, LayoutDashboard, Fingerprint, Info } from 'lucide-react';
+import { User, Mail, Lock, Eye, Shield, Key, LayoutDashboard, Fingerprint, Info, AlertCircle, Ban } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const LoginPage = () => {
@@ -9,14 +9,23 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter both email and password.');
+      return;
+    }
+
     try {
+      setLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: email.trim(), password })
       });
       if (response.ok) {
         const data = await response.json();
@@ -29,10 +38,12 @@ const LoginPage = () => {
         }
       } else {
         const errorData = await response.json();
-        alert('Login failed: ' + errorData.error);
+        setErrorMsg(errorData.error || 'Login failed.');
       }
     } catch (err) {
-      alert('Network error connecting to backend.');
+      setErrorMsg('Network error connecting to backend.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,16 +90,60 @@ const LoginPage = () => {
           {/* Middle Section (Form) */}
           <div style={{ background: 'white', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Login Account</h2>
-            <p style={{ fontSize: '0.85rem', marginBottom: '24px', color: 'var(--text-muted)' }}>Enter your credentials to access your account.</p>
+            <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-muted)' }}>Enter your credentials to access your account.</p>
+
+            {errorMsg && (
+              <div style={{
+                background: errorMsg.toLowerCase().includes('block') ? '#fef2f2' : '#fff7ed',
+                border: errorMsg.toLowerCase().includes('block') ? '1.5px solid #f87171' : '1px solid #fed7aa',
+                color: errorMsg.toLowerCase().includes('block') ? '#b91c1c' : '#c2410c',
+                padding: '14px 16px',
+                borderRadius: '16px',
+                fontSize: '0.88rem',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                lineHeight: '1.4'
+              }}>
+                {errorMsg.toLowerCase().includes('block') ? (
+                  <Ban size={20} style={{ flexShrink: 0, marginTop: '2px', color: '#dc2626' }} />
+                ) : (
+                  <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+                )}
+                <div>
+                  <div style={{ fontWeight: '800', marginBottom: errorMsg.toLowerCase().includes('block') ? '2px' : 0 }}>
+                    {errorMsg.toLowerCase().includes('block') ? 'Access Denied (Account Blocked)' : 'Notice'}
+                  </div>
+                  <div>{errorMsg}</div>
+                </div>
+              </div>
+            )}
             
             <div className="input-group">
-              <User className="input-icon" size={20} />
-              <input type="text" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} />
+              <Mail className="input-icon" size={20} />
+              <input 
+                type="email" 
+                placeholder="Email Address" 
+                value={email} 
+                onChange={e => {
+                  setEmail(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }} 
+              />
             </div>
             
             <div className="input-group mb-2">
               <Lock className="input-icon" size={20} />
-              <input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+              <input 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Password" 
+                value={password} 
+                onChange={e => {
+                  setPassword(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }} 
+              />
               <div onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <Eye className="input-action" size={20} color={showPassword ? '#d97706' : '#9ca3af'} />
               </div>

@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Wallet, PieChart, Users, User } from 'lucide-react';
+import { Home, Wallet, PieChart, Users, User, Ban } from 'lucide-react';
 import './index.css';
+import { API_BASE_URL } from './config';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -78,6 +79,109 @@ const BottomNav = () => {
 };
 
 const MobileAppLayout = () => {
+  const location = useLocation();
+  const [isBlocked, setIsBlocked] = React.useState(false);
+  const [checkingStatus, setCheckingStatus] = React.useState(false);
+  const [blockedUser, setBlockedUser] = React.useState(null);
+
+  const checkUserStatus = React.useCallback(async () => {
+    try {
+      const rawUser = localStorage.getItem('user');
+      if (!rawUser) {
+        setIsBlocked(false);
+        return;
+      }
+      const user = JSON.parse(rawUser);
+      setBlockedUser(user);
+
+      // Check with backend
+      const res = await fetch(`${API_BASE_URL}/api/user/status?id=${encodeURIComponent(user.id || '')}&email=${encodeURIComponent(user.email || '')}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'Blocked') {
+          setIsBlocked(true);
+        } else {
+          setIsBlocked(false);
+        }
+      }
+    } catch (e) {
+      // ignore network errors
+    }
+  }, []);
+
+  React.useEffect(() => {
+    checkUserStatus();
+    const interval = setInterval(checkUserStatus, 5000);
+    return () => clearInterval(interval);
+  }, [checkUserStatus, location.pathname]);
+
+  const handleManualCheck = async () => {
+    setCheckingStatus(true);
+    await checkUserStatus();
+    setTimeout(() => setCheckingStatus(false), 500);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsBlocked(false);
+    window.location.href = '/login';
+  };
+
+  const publicRoutes = ['/', '/login', '/register'];
+  const isPublicPage = publicRoutes.includes(location.pathname);
+
+  // If user is blocked and trying to view an account route
+  if (isBlocked && !isPublicPage) {
+    return (
+      <div className="app-container" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center' }}>
+        <div style={{ width: '84px', height: '84px', borderRadius: '24px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', boxShadow: '0 10px 25px rgba(220, 38, 38, 0.2)' }}>
+          <Ban size={44} />
+        </div>
+        
+        <span style={{ background: '#fecaca', color: '#991b1b', fontSize: '0.72rem', fontWeight: '800', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px' }}>
+          Account Suspended
+        </span>
+
+        <h1 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#111827', margin: '0 0 10px 0' }}>
+          Aap Ka Account Block Hai
+        </h1>
+
+        <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', maxWidth: '330px', margin: '0 auto 22px auto' }}>
+          Aap ko website ne block kar diya hai. Aap ki ID tab tak open nahi ho sakti jab tak admin panel se status dobara <b>Active</b> na kar diya jaye.
+        </p>
+
+        <div style={{ background: 'white', border: '1px solid #fee2e2', borderRadius: '18px', padding: '16px 20px', width: '100%', maxWidth: '320px', marginBottom: '24px', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: '800', textTransform: 'uppercase' }}>User Profile Details</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', marginTop: '4px' }}>{blockedUser?.name || 'Member'}</div>
+          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>{blockedUser?.email}</div>
+          {blockedUser?.mobile && <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: '700', marginTop: '2px' }}>{blockedUser?.mobile}</div>}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef2f2', color: '#dc2626', fontWeight: '800', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', marginTop: '10px' }}>
+            <Ban size={12} /> Status: Blocked by Admin
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '320px' }}>
+          <button 
+            onClick={handleManualCheck}
+            disabled={checkingStatus}
+            style={{ width: '100%', padding: '14px', background: 'var(--gradient-gold)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)', opacity: checkingStatus ? 0.7 : 1 }}
+          >
+            {checkingStatus ? 'Checking Status...' : 'Check Status Again (Refresh)'}
+          </button>
+
+          <button 
+            onClick={handleLogout}
+            style={{ width: '100%', padding: '14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '14px', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
+          >
+            Logout / Bahar Niklein
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <Outlet />

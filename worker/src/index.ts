@@ -96,7 +96,7 @@ app.post('/api/login', async (c) => {
   }
 
   if (user.status === 'Blocked') {
-    return c.json({ error: 'Account is blocked by admin' }, 403)
+    return c.json({ error: 'Aap ko website ne block kar diya hai. Aap ka account admin panel se active hone tak suspend hai.' }, 403)
   }
 
   const hashedPassword = await hashPassword(password);
@@ -111,6 +111,20 @@ app.post('/api/login', async (c) => {
   const token = await sign({ id: user.id, role: user.role }, c.env.JWT_SECRET || 'fallback-secret');
 
   return c.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+})
+
+// Check user status
+app.get('/api/user/status', async (c) => {
+  const id = c.req.query('id');
+  const email = c.req.query('email');
+  if (!id && !email) {
+    return c.json({ error: 'id or email required' }, 400);
+  }
+  const user = await c.env.DB.prepare(
+    `SELECT id, name, email, status FROM users WHERE id = ? OR email = ?`
+  ).bind(id || '', email ? email.toLowerCase().trim() : '').first();
+  if (!user) return c.json({ error: 'User not found' }, 404);
+  return c.json({ id: user.id, status: user.status });
 })
 
 
@@ -153,6 +167,19 @@ app.put('/api/users/:id', adminAuth, async (c) => {
       return c.json({ message: 'User updated successfully' }, 200);
     }
     return c.json({ error: 'Failed to update user' }, 500);
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+})
+
+app.delete('/api/users/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const { success } = await c.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();
+    if (success) {
+      return c.json({ message: 'User deleted successfully' }, 200);
+    }
+    return c.json({ error: 'Failed to delete user' }, 500);
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

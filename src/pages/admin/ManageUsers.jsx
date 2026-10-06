@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Edit, Trash2, Ban, CheckCircle, MoreVertical, X } from 'lucide-react';
+import { Search, Edit, Trash2, Ban, CheckCircle, MoreVertical, X, Phone, Mail, UserCheck, ShieldAlert } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 const ManageUsers = () => {
@@ -84,6 +84,7 @@ const ManageUsers = () => {
       
       if (res.ok) {
         setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+        alert(`User status badal kar "${newStatus}" kar diya gaya hai.`);
       } else {
         alert('Failed to change user status');
       }
@@ -92,14 +93,40 @@ const ManageUsers = () => {
     }
   };
 
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Kya aap waqai user "${user.name}" (${user.email || user.mobile}) ko delete karna chahte hain?\n\nYeh user database se mukammal remove ho jayega.`)) {
+      return;
+    }
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (res.ok) {
+        setUsers(users.filter(u => u.id !== user.id));
+        alert(`User "${user.name}" kamyabi se delete ho gaya!`);
+      } else {
+        alert('Failed to delete user');
+      }
+    } catch (err) {
+      alert('Error deleting user');
+    }
+  };
+
   const filteredUsers = (Array.isArray(users) ? users : []).filter(user => {
     const nameStr = user?.name || '';
     const emailStr = user?.email || '';
+    const mobileStr = user?.mobile || '';
     const idStr = user?.id || '';
     const statusStr = user?.status || '';
 
     const matchesSearch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          mobileStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           idStr.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || statusStr.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
@@ -161,25 +188,37 @@ const ManageUsers = () => {
             <tbody>
               {filteredUsers.length > 0 ? filteredUsers.map((user, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
-                  <td style={{ padding: '20px 32px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--primary-gold)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                        {(user?.name || '?').charAt(0)}
+                  <td style={{ padding: '18px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--primary-gold)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.1rem', flexShrink: 0, boxShadow: '0 3px 8px rgba(217,119,6,0.25)' }}>
+                        {(user?.name || '?').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-dark)' }}>{user?.name || 'Unknown'}</div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user?.email || 'N/A'} <span style={{ opacity: 0.5 }}>• {user?.id || 'N/A'}</span></div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-dark)', marginBottom: '3px' }}>
+                          {user?.name || 'Unknown'}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: '600', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <Mail size={13} color="#9ca3af" />
+                          <span>{user?.email || 'N/A'}</span>
+                        </div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Phone size={13} color="#059669" />
+                          <span>{user?.mobile || user?.phone || 'No Mobile Number'}</span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px' }}>
+                          ID: <span style={{ fontFamily: 'monospace' }}>{user?.id || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '20px 32px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {Number(user?.balance || 0).toLocaleString()}</td>
-                  <td style={{ padding: '20px 32px' }}>
+                  <td style={{ padding: '18px 24px', fontSize: '1rem', fontWeight: '900', color: 'var(--text-dark)' }}>Rs {Number(user?.balance || 0).toLocaleString()}</td>
+                  <td style={{ padding: '18px 24px' }}>
                     <span style={{ padding: '6px 12px', background: user.plan !== 'None' ? '#fef3c7' : '#f1f5f9', color: user.plan !== 'None' ? '#d97706' : '#64748b', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800' }}>
                       {user.plan}
                     </span>
                   </td>
-                  <td style={{ padding: '20px 32px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user.joined}</td>
-                  <td style={{ padding: '20px 32px' }}>
+                  <td style={{ padding: '18px 24px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>{user.joined}</td>
+                  <td style={{ padding: '18px 24px' }}>
                     <span style={{ 
                       display: 'inline-flex', alignItems: 'center', gap: '4px',
                       padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800',
@@ -190,16 +229,38 @@ const ManageUsers = () => {
                       {user.status}
                     </span>
                   </td>
-                  <td style={{ padding: '20px 32px', textAlign: 'right' }}>
+                  <td style={{ padding: '18px 24px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                      <button onClick={() => handleEditClick(user)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#3b82f6', cursor: 'pointer' }} title="Edit User">
+                      <button 
+                        onClick={() => handleEditClick(user)} 
+                        style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#3b82f6', cursor: 'pointer', transition: 'all 0.2s' }} 
+                        title="Edit User"
+                      >
                         <Edit size={16} />
                       </button>
-                      <button onClick={() => toggleUserStatus(user.id, user.status)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: user.status === 'Active' ? '#dc2626' : '#16a34a', cursor: 'pointer' }} title={user.status === 'Active' ? 'Block User' : 'Unblock User'}>
+                      <button 
+                        onClick={() => toggleUserStatus(user.id, user.status)} 
+                        style={{ 
+                          width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          borderRadius: '8px', border: user.status === 'Active' ? '1px solid #fed7aa' : '1px solid #bbf7d0', 
+                          background: user.status === 'Active' ? '#fff7ed' : '#f0fdf4', 
+                          color: user.status === 'Active' ? '#ea580c' : '#16a34a', 
+                          cursor: 'pointer', transition: 'all 0.2s' 
+                        }} 
+                        title={user.status === 'Active' ? 'Block User' : 'Unblock / Activate User'}
+                      >
                         {user.status === 'Active' ? <Ban size={16} /> : <CheckCircle size={16} />}
                       </button>
-                      <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                        <MoreVertical size={16} />
+                      <button 
+                        onClick={() => handleDeleteUser(user)} 
+                        style={{ 
+                          width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', 
+                          color: '#dc2626', cursor: 'pointer', transition: 'all 0.2s' 
+                        }} 
+                        title="Delete User"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>

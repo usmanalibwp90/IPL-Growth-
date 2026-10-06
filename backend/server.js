@@ -98,7 +98,7 @@ app.post('/api/login', (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     if (user.status === 'Blocked') {
-      return res.status(403).json({ error: 'Account is blocked by admin' });
+      return res.status(403).json({ error: 'Aap ko website ne block kar diya hai. Aap ka account admin panel se active hone tak suspend hai.' });
     }
     if (user.password !== password) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -109,12 +109,55 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+// Check user status
+app.get('/api/user/status', (req, res) => {
+  const { id, email } = req.query;
+  if (!id && !email) {
+    return res.status(400).json({ error: 'id or email required' });
+  }
+  db.get(`SELECT id, name, email, status FROM users WHERE id = ? OR email = ?`, [id || '', email || ''], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ id: user.id, status: user.status });
+  });
+});
+
+// Get all users
 app.get('/api/users', (req, res) => {
   db.all(`SELECT * FROM users ORDER BY joined DESC`, [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(rows);
+  });
+});
+
+// Update user (balance, plan, status)
+app.put('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  const { balance, plan, status } = req.body;
+  db.run(
+    `UPDATE users SET balance = COALESCE(?, balance), plan = COALESCE(?, plan), status = COALESCE(?, status) WHERE id = ?`,
+    [balance !== undefined ? balance : null, plan || null, status || null, id],
+    function(err) {
+      if (err) {
+        console.error('Update user error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'User updated successfully' });
+    }
+  );
+});
+
+// Delete user
+app.delete('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  db.run(`DELETE FROM users WHERE id = ?`, [id], function(err) {
+    if (err) {
+      console.error('Delete user error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'User deleted successfully' });
   });
 });
 
