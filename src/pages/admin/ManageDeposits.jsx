@@ -70,6 +70,13 @@ const ManageDeposits = () => {
            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
            body: JSON.stringify({ plan: approvedDeposit.planName, status: 'Active' })
         }).catch(err => console.error('Failed to update plan on backend', err));
+        
+        // Distribute commission
+        fetch(`${API_BASE_URL}/api/distribute-commission`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+           body: JSON.stringify({ userId: approvedDeposit.userId, amount: approvedDeposit.amount })
+        }).catch(err => console.error('Failed to distribute commission', err));
       }
       
       const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '{}');

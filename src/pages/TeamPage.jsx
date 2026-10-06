@@ -56,7 +56,7 @@ const TeamPage = () => {
   };
 
   const handleCopyLink = () => {
-    const link = `https://islamicprofit.com/register?ref=${user.username || user.id || 'guest_user'}`;
+    const link = `https://islamicprofit.com/register?ref=${user.username || user.name || user.id || 'guest_user'}`;
     navigator.clipboard.writeText(link).then(() => {
       showNotification('Referral link copied to clipboard!', 'success');
     }).catch(() => {
@@ -70,13 +70,26 @@ const TeamPage = () => {
       setSettings(JSON.parse(saved));
     }
     
-    // Load real team data from localStorage instead of demo data
-    const savedMembers = JSON.parse(localStorage.getItem('my_team_members') || '[]');
-    setTeamMembers(savedMembers);
-    setTotalReferrals(savedMembers.length);
-    
-    const calcCommission = savedMembers.reduce((sum, m) => sum + (Number(m.commission?.replace('Rs', '')) || 0), 0);
-    setTotalCommission(calcCommission);
+    // Fetch real team data from backend
+    fetch(`${API_BASE_URL}/api/team/${user.username || user.name}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.team) {
+          const members = data.team.map(m => ({
+            id: m.id,
+            username: m.name,
+            joined: m.joined,
+            level: 'Level 1',
+            commission: 'Rs' + (data.commissions.find(c => c.description.includes(m.name))?.amount || 0)
+          }));
+          setTeamMembers(members);
+          setTotalReferrals(members.length);
+          
+          const calcCommission = members.reduce((sum, m) => sum + (Number(m.commission?.replace('Rs', '')) || 0), 0);
+          setTotalCommission(calcCommission);
+        }
+      })
+      .catch(err => console.error('Failed to fetch team', err));
     
     const savedAvail = Number(localStorage.getItem('available_commission')) || 0;
     setAvailableCommission(savedAvail);
@@ -108,7 +121,7 @@ const TeamPage = () => {
         
         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '12px', backdropFilter: 'blur(5px)' }}>
           <div style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            https://islamicprofit.com/register?ref={user.username || user.id || 'guest_user'}
+            https://islamicprofit.com/register?ref={user.username || user.name || user.id || 'guest_user'}
           </div>
           <button onClick={handleCopyLink} style={{ background: 'white', color: '#d97706', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }} onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
             <Copy size={16} /> Copy

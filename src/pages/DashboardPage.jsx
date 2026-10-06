@@ -343,7 +343,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: '800' }}>{user.name || user.username || 'User'}</h2>
-            <div style={{ fontSize: '0.8rem', opacity: 0.9, fontWeight: '500' }}>Refer by: No Upliner</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.9, fontWeight: '500' }}>Refer by: {user.upliner || 'No Upliner'}</div>
           </div>
         </div>
         

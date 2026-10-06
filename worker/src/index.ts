@@ -27,7 +27,7 @@ async function hashPassword(password: string): Promise<string> {
 
 // Register API
 app.post('/api/register', async (c) => {
-  const { username, mobile, email, password } = await c.req.json()
+  const { username, mobile, email, password, upliner } = await c.req.json()
   
   if (!username || !mobile || !email || !password) {
     return c.json({ error: 'All fields are required' }, 400)
@@ -58,15 +58,15 @@ app.post('/api/register', async (c) => {
     const joined = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     await c.env.DB.prepare(
-      `INSERT INTO users (id, name, mobile, email, password, joined) VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, username, mobile, normalizedEmail, hashedPassword, joined).run();
+      `INSERT INTO users (id, name, mobile, email, password, joined, upliner) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, username, mobile, normalizedEmail, hashedPassword, joined, upliner || null).run();
 
     // Create JWT Token
     const token = await sign({ id, role: 'user' }, c.env.JWT_SECRET || 'fallback-secret');
 
     console.log(`[REGISTER SUCCESS] User ID: ${id}, Email: ${normalizedEmail}`);
 
-    return c.json({ message: 'User registered successfully', token, user: { id, name: username, email: normalizedEmail, mobile, role: 'user' } }, 201)
+    return c.json({ message: 'User registered successfully', token, user: { id, name: username, email: normalizedEmail, mobile, role: 'user', upliner: upliner || null } }, 201)
   } catch (err: any) {
     if (err.message.includes('UNIQUE constraint failed')) {
       return c.json({ error: 'Mobile or Email already exists' }, 409)
@@ -570,6 +570,55 @@ app.delete('/api/withdrawals/:id', adminAuth, async (c) => {
   try {
     await c.env.DB.prepare(`DELETE FROM withdrawals WHERE id = ?`).bind(id).run();
     return c.json({ message: 'Withdrawal deleted' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// ==========================================
+// COMMISSION API
+// ==========================================
+app.post('/api/distribute-commission', adminAuth, async (c) => {
+  const { userId, amount } = await c.req.json();
+  if (!userId || !amount) return c.json({ error: 'Missing data' }, 400);
+  
+  try {
+    const { results } = await c.env.DB.prepare('SELECT upliner, name FROM users WHERE id = ?').bind(userId).all();
+    if (!results || results.length === 0) return c.json({ message: 'User not found' });
+    
+    const uplinerRef = results[0].upliner;
+    const userName = results[0].name;
+    if (!uplinerRef) return c.json({ message: 'No upliner' });
+
+    const { results: upResults } = await c.env.DB.prepare('SELECT id, balance FROM users WHERE id = ? OR name = ? OR username = ?').bind(uplinerRef, uplinerRef, uplinerRef).all();
+    if (!upResults || upResults.length === 0) return c.json({ message: 'Upliner user not found' });
+    
+    const uplinerId = upResults[0].id;
+    const commission = amount * 0.16;
+    
+    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(commission, uplinerId).run();
+    
+    const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
+    const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    await c.env.DB.prepare(
+      `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(trxId, uplinerId, uplinerRef, 'Team Commission', commission, date, `Level 1 Commission from ${userName}`).run();
+    
+    return c.json({ message: 'Commission distributed successfully', commission });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/team/:username', async (c) => {
+  const username = c.req.param('username');
+  try {
+    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ?`).bind(username).all();
+    
+    // Calculate commission directly from transactions
+    const { results: commissions } = await c.env.DB.prepare(`SELECT description, amount FROM transactions WHERE user = ? AND type = 'Team Commission'`).bind(username).all();
+    
+    return c.json({ team: results || [], commissions: commissions || [] });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

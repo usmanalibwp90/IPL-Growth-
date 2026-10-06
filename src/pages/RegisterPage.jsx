@@ -9,6 +9,12 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Extract referral from URL
+  const queryParams = new URLSearchParams(window.location.search);
+  const refCode = queryParams.get('ref') || '';
+  const [upliner, setUpliner] = useState(refCode);
+
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,7 +111,8 @@ const RegisterPage = () => {
           username: username.trim(), 
           mobile: fullMobile, 
           email: trimmedEmail.toLowerCase(), 
-          password 
+          password,
+          upliner 
         })
       });
       
@@ -198,6 +205,29 @@ const RegisterPage = () => {
                 }} 
               />
             </div>
+
+            {upliner && (
+              <div className="input-group" style={{ position: 'relative' }}>
+                <User className="input-icon" size={20} color="#d97706" />
+                <input 
+                  type="text" 
+                  value={upliner} 
+                  readOnly 
+                  style={{ background: '#fef3c7', color: '#d97706', fontWeight: '800' }}
+                />
+                <span style={{
+                  position: 'absolute',
+                  right: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  color: '#d97706'
+                }}>
+                  Upliner / Referrer
+                </span>
+              </div>
+            )}
 
             <div className="input-group" style={{ position: 'relative' }}>
               <Mail className="input-icon" size={20} />
