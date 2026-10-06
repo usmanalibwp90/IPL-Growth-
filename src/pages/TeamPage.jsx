@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Users, Copy, UserPlus, TrendingUp, Award, Wallet, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const TeamPage = () => {
   const navigate = useNavigate();
