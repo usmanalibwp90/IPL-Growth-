@@ -84,19 +84,7 @@ const DashboardPage = () => {
       const u = JSON.parse(rawUser);
       setUser(u);
 
-      // 1. Check local storage cache
       if (u.status === 'Blocked') {
-        setIsBlocked(true);
-        return;
-      }
-      const blockedList = JSON.parse(localStorage.getItem('blocked_user_ids') || '[]');
-      if (u.id && blockedList.includes(u.id)) {
-        setIsBlocked(true);
-        return;
-      }
-      const adminCache = JSON.parse(localStorage.getItem('admin_users_cache') || '[]');
-      const found = adminCache.find(x => x.id === u.id || (x.email && x.email === u.email));
-      if (found && found.status === 'Blocked') {
         setIsBlocked(true);
         return;
       }
@@ -124,12 +112,8 @@ const DashboardPage = () => {
       }
       
       // Determine active plan
-      const userId = u.id || u.email;
-      const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
       if (u.plan && u.plan !== 'None') {
          setActivePlan(u.plan);
-      } else if (userId && localMap[userId]) {
-         setActivePlan(localMap[userId]);
       } else {
          setActivePlan('None');
       }

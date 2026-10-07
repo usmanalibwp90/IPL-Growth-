@@ -21,40 +21,57 @@ const plansData = [
 const MyTaskPage = () => {
   const navigate = useNavigate();
 
-  // Mock Backend State Initialization
-  const getBackendState = () => {
-    const user = JSON.parse(localStorage.getItem('user')) || {};
-    const userId = user.id || user.email;
-    const localMap = JSON.parse(localStorage.getItem('user_plans_map') || '{}');
-    const mappedPlan = (userId && localMap[userId]) ? localMap[userId] : user.plan;
-    const userPlan = mappedPlan && mappedPlan !== 'None' ? mappedPlan : null;
-    
-    let dailyProfit = 0;
-    if (userPlan) {
-      const planInfo = plansData.find(p => p.name.toLowerCase() === userPlan.toLowerCase());
-      if (planInfo) dailyProfit = planInfo.daily;
-    }
-
-    const userTaskKey = userId ? `ipl_user_data_${userId}` : 'ipl_user_data';
-    const stored = localStorage.getItem(userTaskKey);
-    const now = Date.now();
-    
-    let state = stored ? JSON.parse(stored) : {
-      last_profit_claim_at: now - (24 * 60 * 60 * 1000), 
-      next_profit_available_at: now, // Available immediately on first load
-    };
-
-    return {
-      ...state,
-      active_plan_id: userPlan,
-      daily_profit_amount: dailyProfit
-    };
-  };
-
-  const [backendState, setBackendState] = useState(getBackendState);
+  const [backendState, setBackendState] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    const fetchState = async () => {
+      const user = JSON.parse(localStorage.getItem('user')) || {};
+      const userId = user.id || user.email;
+      if (!userId) return;
+
+      try {
+        const statusRes = await fetch(`${API_BASE_URL}/api/user/status?id=${userId}`);
+        if (!statusRes.ok) return;
+        const { plan } = await statusRes.json();
+        const userPlan = plan && plan !== 'None' ? plan : null;
+
+        let dailyProfit = 0;
+        if (userPlan) {
+          const planInfo = plansData.find(p => p.name.toLowerCase() === userPlan.toLowerCase());
+          if (planInfo) dailyProfit = planInfo.daily;
+        }
+
+        const transRes = await fetch(`${API_BASE_URL}/api/transactions/user/${userId}`);
+        let lastClaimTime = 0;
+        if (transRes.ok) {
+          const transactions = await transRes.json();
+          const latestProfit = transactions.find(t => t.type === 'profit');
+          if (latestProfit && latestProfit.date) {
+             lastClaimTime = new Date(latestProfit.date).getTime();
+          }
+        }
+
+        const now = Date.now();
+        let nextAvailable = lastClaimTime + (24 * 60 * 60 * 1000);
+        if (nextAvailable < now) {
+           nextAvailable = now; // Ready to claim
+        }
+
+        setBackendState({
+          last_profit_claim_at: lastClaimTime,
+          next_profit_available_at: nextAvailable,
+          active_plan_id: userPlan,
+          daily_profit_amount: dailyProfit
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchState();
+  }, []);
 
   // Calculate time remaining based on absolute server timestamp
   useEffect(() => {
@@ -115,9 +132,6 @@ const MyTaskPage = () => {
         last_profit_claim_at: now,
         next_profit_available_at: next
       };
-
-      const userTaskKey = currentUserId ? `ipl_user_data_${currentUserId}` : 'ipl_user_data';
-      localStorage.setItem(userTaskKey, JSON.stringify(newState));
       
       setBackendState(newState);
       setSuccessMsg('Daily Profit Credited Successfully');

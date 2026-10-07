@@ -58,15 +58,22 @@ const WithdrawPage = () => {
       
       // Fetch dynamic balance
       Promise.all([
+        fetch(`${API_BASE_URL}/api/user/status?id=${userId}`),
         fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
         fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
       ])
-      .then(async ([withRes, transRes]) => {
+      .then(async ([statRes, withRes, transRes]) => {
         let dynamicBalance = 0;
+        if (statRes.ok) {
+           const s = await statRes.json();
+           dynamicBalance = Number(s.balance || 0);
+        }
         if (withRes.ok) {
           const withdrawals = await withRes.json();
           withdrawals.forEach(w => {
-            dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            if (w.status !== 'Rejected') {
+              dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            }
           });
         }
         if (transRes.ok) {

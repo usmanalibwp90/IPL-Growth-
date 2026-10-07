@@ -53,13 +53,11 @@ const WithdrawHistoryPage = () => {
         </div>
         <button 
           onClick={() => {
-            if(window.confirm('Clear all withdrawal history? Note: Not implemented in backend yet.')) {
-              setHistoryData([]);
-            }
+            window.location.reload();
           }}
-          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+          style={{ background: '#e2e8f0', color: '#475569', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
         >
-          Clear
+          Refresh
         </button>
       </div>
 

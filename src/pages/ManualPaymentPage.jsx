@@ -114,9 +114,7 @@ const ManualPaymentPage = () => {
       planName: plan.name || (plan.id ? `Plan ${plan.id}` : 'Plan 1')
     };
     
-    // Save locally for quick display on UI
-    const existingDeposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-    localStorage.setItem('deposit_history', JSON.stringify([newDeposit, ...existingDeposits]));
+    // Removed local caching to ensure data syncs only from DB.
 
     // Send to backend
     fetch(`${API_BASE_URL}/api/deposits`, {

@@ -47,25 +47,38 @@ const DepositPage = () => {
     if (rawUser) {
       const u = JSON.parse(rawUser);
       const userId = u.id || u.email;
-      let dynamicBalance = 0;
       
-      const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-      withdrawals.forEach(w => {
-         if (w.userId === userId || w.userId === u.email || w.user === u.name) {
-            dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
-         }
-      });
-      
-      const profits = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
-      profits.forEach(p => {
-         if (p.type === 'profit') {
-            if (!p.userId || p.userId === userId || p.userId === u.email || p.user === u.name) {
-               dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+      // Fetch dynamic balance
+      Promise.all([
+        fetch(`${API_BASE_URL}/api/user/status?id=${userId}`),
+        fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
+        fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
+      ])
+      .then(async ([statRes, withRes, transRes]) => {
+        let dynamicBalance = 0;
+        if (statRes.ok) {
+           const s = await statRes.json();
+           dynamicBalance = Number(s.balance || 0);
+        }
+        if (withRes.ok) {
+          const withdrawals = await withRes.json();
+          withdrawals.forEach(w => {
+            if (w.status !== 'Rejected') {
+               dynamicBalance -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
             }
-         }
-      });
-      
-      setCalculatedBalance(dynamicBalance);
+          });
+        }
+        if (transRes.ok) {
+          const profits = await transRes.json();
+          profits.forEach(p => {
+            if (p.type === 'profit') {
+              dynamicBalance += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, '')) || 0;
+            }
+          });
+        }
+        setCalculatedBalance(dynamicBalance);
+      })
+      .catch(err => console.error("Failed to load balance stats", err));
     }
   }, []);
 

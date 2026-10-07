@@ -9,16 +9,8 @@ const DepositHistoryPage = () => {
   const [historyData, setHistoryData] = React.useState([]);
 
   React.useEffect(() => {
-    // Local fallback for instant UX
-    const saved = JSON.parse(localStorage.getItem('deposit_history') || '[]');
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const userId = user.id || user.email;
-    
-    if (userId && saved.length > 0) {
-      setHistoryData(saved.filter(d => d.userId === userId || d.user === user.name));
-    } else {
-      setHistoryData(saved);
-    }
 
     // Fetch from backend
     if (userId) {
@@ -27,11 +19,6 @@ const DepositHistoryPage = () => {
         .then(data => {
           if (Array.isArray(data)) {
             setHistoryData(data);
-            
-            // Cache locally
-            const allLocal = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-            const others = allLocal.filter(d => d.userId !== userId && d.user !== user.name);
-            localStorage.setItem('deposit_history', JSON.stringify([...data, ...others]));
           }
         })
         .catch(err => console.error('Failed to fetch user deposits', err));
@@ -66,12 +53,11 @@ const DepositHistoryPage = () => {
         </div>
         <button 
           onClick={() => {
-            localStorage.removeItem('deposit_history');
             window.location.reload();
           }}
-          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+          style={{ background: '#e2e8f0', color: '#475569', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
         >
-          Clear
+          Refresh
         </button>
       </div>
 

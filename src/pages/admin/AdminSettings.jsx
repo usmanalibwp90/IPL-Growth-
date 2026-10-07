@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Shield, Bell, Smartphone, Globe, Users, MessageSquare, CheckCircle, LayoutTemplate } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const AdminSettings = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -44,34 +45,21 @@ const AdminSettings = () => {
   const [notification, setNotification] = useState({ show: false, message: '' });
 
   useEffect(() => {
-    const isMaintenance = localStorage.getItem('maintenance_mode') === 'true';
-    setMaintenanceMode(isMaintenance);
-
-    const savedConfig = localStorage.getItem('general_config');
-    if (savedConfig) {
-      setGeneralConfig(JSON.parse(savedConfig));
-    }
-    
-    const savedHomeConfig = localStorage.getItem('home_config');
-    if (savedHomeConfig) {
-      setHomeConfig(JSON.parse(savedHomeConfig));
-    }
-
-    const savedCreds = localStorage.getItem('admin_credentials');
-    if (savedCreds) {
-      setAdminCredentials(JSON.parse(savedCreds));
-    }
-    
-    const savedMsg = localStorage.getItem('admin_notification_message');
-    if (savedMsg) {
-      setAdminMessage(JSON.parse(savedMsg));
-    }
+    fetch(`${API_BASE_URL}/api/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.maintenance_mode) setMaintenanceMode(data.maintenance_mode === 'true');
+        if (data.general_config) setGeneralConfig(JSON.parse(data.general_config));
+        if (data.home_config) setHomeConfig(JSON.parse(data.home_config));
+        if (data.admin_credentials) setAdminCredentials(JSON.parse(data.admin_credentials));
+        if (data.admin_notification_message) setAdminMessage(JSON.parse(data.admin_notification_message));
+      })
+      .catch(err => console.error('Failed to load settings', err));
   }, []);
 
   const handleMaintenanceToggle = () => {
     const newVal = !maintenanceMode;
     setMaintenanceMode(newVal);
-    localStorage.setItem('maintenance_mode', newVal.toString());
   };
 
   const handleConfigChange = (e) => {
@@ -93,10 +81,24 @@ const AdminSettings = () => {
   };
 
   const saveGeneralConfig = () => {
-    localStorage.setItem('general_config', JSON.stringify(generalConfig));
-    localStorage.setItem('home_config', JSON.stringify(homeConfig));
-    localStorage.setItem('admin_credentials', JSON.stringify(adminCredentials));
-    localStorage.setItem('admin_notification_message', JSON.stringify(adminMessage));
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/api/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        maintenance_mode: maintenanceMode.toString(),
+        general_config: JSON.stringify(generalConfig),
+        home_config: JSON.stringify(homeConfig),
+        admin_credentials: JSON.stringify(adminCredentials),
+        admin_notification_message: JSON.stringify(adminMessage)
+      })
+    })
+    .then(res => res.json())
+    .then(() => {
+      setNotification({ show: true, message: 'Settings saved successfully' });
+      setTimeout(() => setNotification({ show: false, message: '' }), 3000);
+    })
+    .catch(err => console.error('Failed to save settings', err));
     
     setNotification({ show: true, message: 'Settings updated successfully!' });
     setTimeout(() => {

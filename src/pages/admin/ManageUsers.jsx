@@ -38,11 +38,6 @@ const ManageUsers = () => {
           userList = data.users;
         }
         setUsers(userList);
-        
-        // Cache blocked users in localStorage
-        const blocked = userList.filter(u => u.status === 'Blocked').map(u => u.id);
-        localStorage.setItem('blocked_user_ids', JSON.stringify(blocked));
-        localStorage.setItem('admin_users_cache', JSON.stringify(userList));
       })
       .catch(err => console.error("Users fetch error:", err));
   }, []);
@@ -75,7 +70,6 @@ const ManageUsers = () => {
         const newMap = { ...userPlansMap };
         newMap[editingUser.id] = editPlan;
         setUserPlansMap(newMap);
-        localStorage.setItem('user_plans_map', JSON.stringify(newMap));
 
         setUsers(users.map(u => 
           u.id === editingUser.id 
@@ -100,11 +94,6 @@ const ManageUsers = () => {
     // Update local state
     const updatedUsers = users.map(u => u.id === id ? { ...u, status: newStatus } : u);
     setUsers(updatedUsers);
-
-    // Save blocked status to localStorage immediately
-    const blocked = updatedUsers.filter(u => u.status === 'Blocked').map(u => u.id);
-    localStorage.setItem('blocked_user_ids', JSON.stringify(blocked));
-    localStorage.setItem('admin_users_cache', JSON.stringify(updatedUsers));
 
     // Update logged-in user in localStorage if matching
     const currentLoggedIn = JSON.parse(localStorage.getItem('user') || '{}');
