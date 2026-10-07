@@ -132,6 +132,23 @@ app.get('/api/user/status', async (c) => {
 // ADMIN PROTECTED ROUTES
 // ---------------------------
 
+// Middleware to check user/admin role (valid logged in user)
+const userAuth = async (c: any, next: any) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const payload = await verify(token, c.env.JWT_SECRET || 'fallback-secret', 'HS256');
+    // Save decoded user in context
+    c.set('user', payload);
+    await next();
+  } catch (e: any) {
+    return c.json({ error: 'Invalid token' }, 401)
+  }
+}
+
 // Middleware to check admin role
 const adminAuth = async (c: any, next: any) => {
   const authHeader = c.req.header('Authorization');
@@ -144,6 +161,7 @@ const adminAuth = async (c: any, next: any) => {
     if (payload.role !== 'admin') {
       return c.json({ error: 'Forbidden: Admin access required' }, 403)
     }
+    c.set('user', payload);
     await next();
   } catch (e: any) {
     console.error("JWT verify error:", e);
@@ -579,46 +597,214 @@ app.delete('/api/withdrawals/:id', adminAuth, async (c) => {
 // COMMISSION API
 // ==========================================
 app.post('/api/distribute-commission', adminAuth, async (c) => {
-  const { userId, amount } = await c.req.json();
+  const { userId, amount, depositId, planName } = await c.req.json();
   if (!userId || !amount) return c.json({ error: 'Missing data' }, 400);
   
   try {
-    const { results } = await c.env.DB.prepare('SELECT upliner, name FROM users WHERE id = ?').bind(userId).all();
+    const { results } = await c.env.DB.prepare('SELECT id, name, upliner FROM users WHERE id = ?').bind(userId).all();
     if (!results || results.length === 0) return c.json({ message: 'User not found' });
     
-    const uplinerRef = results[0].upliner;
-    const userName = results[0].name;
-    if (!uplinerRef) return c.json({ message: 'No upliner' });
+    const user = results[0];
+    const userName = user.name;
+    
+    const pkgName = planName || 'Unknown Package';
+    const pkgAmount = amount;
+    
+    const levels = [
+      { level: 1, percentage: 0.16 },
+      { level: 2, percentage: 0.04 },
+      { level: 3, percentage: 0.01 }
+    ];
 
-    const { results: upResults } = await c.env.DB.prepare('SELECT id, balance FROM users WHERE id = ? OR name = ? OR username = ?').bind(uplinerRef, uplinerRef, uplinerRef).all();
-    if (!upResults || upResults.length === 0) return c.json({ message: 'Upliner user not found' });
-    
-    const uplinerId = upResults[0].id;
-    const commission = amount * 0.16;
-    
-    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(commission, uplinerId).run();
-    
-    const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
+    let currentUpliner = user.upliner;
+    let distributedCommissions = [];
+
     const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    await c.env.DB.prepare(
-      `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(trxId, uplinerId, uplinerRef, 'Team Commission', commission, date, `Level 1 Commission from ${userName}`).run();
-    
-    return c.json({ message: 'Commission distributed successfully', commission });
+    const now = new Date().toISOString();
+
+    for (let i = 0; i < levels.length; i++) {
+      if (!currentUpliner) break;
+
+      // Find the upliner user
+      const { results: upResults } = await c.env.DB.prepare('SELECT id, name, upliner FROM users WHERE id = ? OR name = ? OR email = ?').bind(currentUpliner, currentUpliner, currentUpliner).all();
+      if (!upResults || upResults.length === 0) break;
+
+      const uplinerNode = upResults[0];
+      const uplinerId = uplinerNode.id;
+      const commissionAmount = pkgAmount * levels[i].percentage;
+
+      // Check if this commission is already processed to prevent duplicates
+      const checkDup = await c.env.DB.prepare(
+        'SELECT id FROM referral_commissions WHERE referrer_id = ? AND referred_user_id = ? AND level = ? AND package_name = ?'
+      ).bind(uplinerId, userId, levels[i].level, pkgName).first();
+
+      if (!checkDup) {
+        // Distribute commission
+        const commissionId = `COM-${Math.floor(100000 + Math.random() * 900000)}`;
+        
+        await c.env.DB.prepare(
+          `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, package_id, package_name, package_amount, level, commission_percentage, commission_amount, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(commissionId, uplinerId, userId, depositId || null, pkgName, pkgAmount, levels[i].level, levels[i].percentage * 100, commissionAmount, 'available', now).run();
+        
+        distributedCommissions.push({ level: levels[i].level, amount: commissionAmount, upliner: uplinerNode.name });
+      }
+
+      currentUpliner = uplinerNode.upliner;
+    }
+
+    return c.json({ message: 'Commission distributed successfully', distributedCommissions });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }
 });
 
-app.get('/api/team/:username', async (c) => {
-  const username = c.req.param('username');
+app.get('/api/admin/backfill-commissions', async (c) => {
   try {
-    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ? OR upliner = (SELECT name FROM users WHERE id = ? LIMIT 1)`).bind(username, username).all();
+    const { results: deposits } = await c.env.DB.prepare(`SELECT * FROM deposits WHERE status = 'Approved' AND planName IS NOT NULL AND planName != ''`).all();
+    let added = 0;
+    const levels = [ { level: 1, p: 0.16 }, { level: 2, p: 0.04 }, { level: 3, p: 0.01 } ];
+
+    for (const dep of deposits) {
+       const { results: userRes } = await c.env.DB.prepare(`SELECT id, name, upliner FROM users WHERE id = ?`).bind(dep.userId).all();
+       if (!userRes || userRes.length === 0) continue;
+       const user = userRes[0];
+       let currentUpliner = user.upliner;
+       
+       for (let i=0; i<3; i++) {
+          if (!currentUpliner) break;
+          const { results: upRes } = await c.env.DB.prepare(`SELECT id, name, upliner FROM users WHERE id = ? OR name = ? OR email = ?`).bind(currentUpliner, currentUpliner, currentUpliner).all();
+          if (!upRes || upRes.length === 0) break;
+          
+          const uplinerNode = upRes[0];
+          const commAmount = dep.amount * levels[i].p;
+          
+          // check if commission already exists in referral_commissions
+          const dupCheck = await c.env.DB.prepare(`SELECT id FROM referral_commissions WHERE referrer_id = ? AND referred_user_id = ? AND level = ? AND package_name = ?`).bind(uplinerNode.id, user.id, levels[i].level, dep.planName).first();
+          
+          if (!dupCheck) {
+             const commissionId = `COM-BF-${Math.floor(100000 + Math.random() * 900000)}`;
+             await c.env.DB.prepare(`INSERT INTO referral_commissions (id, referrer_id, referred_user_id, package_id, package_name, package_amount, level, commission_percentage, commission_amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+                commissionId, uplinerNode.id, user.id, dep.id, dep.planName, dep.amount, levels[i].level, levels[i].p * 100, commAmount, 'available', dep.date
+             ).run();
+             
+             // Check if already paid via old system
+             const trxDup = await c.env.DB.prepare(`SELECT id FROM transactions WHERE userId = ? AND description LIKE ? AND type = 'Team Commission'`).bind(uplinerNode.id, `%from ${user.name}%`).first();
+             
+             if (trxDup) {
+               // Already paid, mark as transferred
+               await c.env.DB.prepare(`UPDATE referral_commissions SET status = 'transferred' WHERE id = ?`).bind(commissionId).run();
+             }
+             added++;
+          }
+          currentUpliner = uplinerNode.upliner;
+       }
+    }
+    return c.json({ message: `Backfill complete. Added ${added} commission records.` });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.get('/api/team/:identifier?', async (c) => {
+  let identifier = c.req.param('identifier');
+  
+  // Try to use token auth if available
+  const authHeader = c.req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1];
+      const payload = await verify(token, c.env.JWT_SECRET || 'fallback-secret', 'HS256');
+      identifier = payload.id;
+    } catch (e) {
+      // Ignore token errors, fallback to identifier if provided
+    }
+  }
+
+  if (!identifier) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  try {
+    // Determine user id or name
+    const { results: selfResults } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id = ? OR name = ?').bind(identifier, identifier).all();
+    if (!selfResults || selfResults.length === 0) return c.json({ team: [], commissions: [] });
     
-    // Calculate commission directly from transactions
-    const { results: commissions } = await c.env.DB.prepare(`SELECT description, amount FROM transactions WHERE (user = ? OR user = (SELECT name FROM users WHERE id = ? LIMIT 1)) AND type = 'Team Commission'`).bind(username, username).all();
+    const selfId = selfResults[0].id;
+    const selfName = selfResults[0].name;
+
+    // Get team members (level 1 only)
+    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ? OR upliner = ?`).bind(selfId, selfName).all();
     
-    return c.json({ team: results || [], commissions: commissions || [] });
+    // Get commissions from referral_commissions
+    const { results: commissions } = await c.env.DB.prepare(`
+      SELECT r.referred_user_id, r.package_name, r.commission_amount, r.level, r.status, u.name as referred_name 
+      FROM referral_commissions r
+      LEFT JOIN users u ON r.referred_user_id = u.id
+      WHERE r.referrer_id = ?
+    `).bind(selfId).all();
+    
+    // Compute total and available commissions
+    const totalCommission = (commissions || []).reduce((sum, c) => sum + (c.commission_amount || 0), 0);
+    const availableCommission = (commissions || []).filter(c => c.status === 'available').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
+    
+    return c.json({ team: results || [], commissions: commissions || [], totalCommission, availableCommission });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// Transfer commission to main wallet
+app.post('/api/transfer-commission', userAuth, async (c) => {
+  try {
+    const authUser = c.get('user');
+    const { amount } = await c.req.json();
+    if (!amount) return c.json({ error: 'Missing parameters' }, 400);
+
+    const userId = authUser.id;
+    const { results: selfResults } = await c.env.DB.prepare('SELECT id, name, balance FROM users WHERE id = ?').bind(userId).all();
+    if (!selfResults || selfResults.length === 0) return c.json({ error: 'User not found' }, 404);
+
+    const selfId = selfResults[0].id;
+    const selfName = selfResults[0].name;
+
+    // Validate 10 referrals rule
+    const refCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE upliner = ? OR upliner = ?').bind(selfId, selfName).first();
+    const totalReferrals = refCount?.count || 0;
+
+    if (totalReferrals < 10) {
+      return c.json({ error: `Complete 10 referrals to unlock commission transfer. Current: ${totalReferrals}/10` }, 403);
+    }
+
+    // Sum available
+    const available = await c.env.DB.prepare(
+      `SELECT SUM(commission_amount) as total FROM referral_commissions WHERE referrer_id = ? AND status = 'available'`
+    ).bind(selfId).first();
+
+    const totalAvailable = available?.total || 0;
+    
+    if (totalAvailable < amount) {
+      return c.json({ error: 'Insufficient available commission' }, 400);
+    }
+
+    // Update referral commissions to transferred
+    await c.env.DB.prepare(
+      `UPDATE referral_commissions SET status = 'transferred' WHERE referrer_id = ? AND status = 'available'`
+    ).bind(selfId).run();
+
+    // Add to user balance
+    await c.env.DB.prepare(
+      `UPDATE users SET balance = balance + ? WHERE id = ?`
+    ).bind(totalAvailable, selfId).run();
+
+    // Create a transaction
+    const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
+    const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    await c.env.DB.prepare(
+      `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(trxId, selfId, 'User', 'Commission Transfer', totalAvailable, date, 'Transferred commission to main wallet').run();
+
+    return c.json({ message: 'Commission transferred successfully', transferred: totalAvailable });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

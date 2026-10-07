@@ -34,26 +34,38 @@ const TeamPage = () => {
       return;
     }
     
-    if (availableCommission < settings.minTransferAmount) {
-      showNotification(`Minimum transfer amount is Rs${settings.minTransferAmount}. You need Rs${settings.minTransferAmount - availableCommission} more to transfer.`);
+    if (totalReferrals < 10) {
+      showNotification("Complete 10 referrals to unlock commission transfer.");
       return;
     }
 
-    const lastTransfer = localStorage.getItem('last_commission_transfer');
-    if (lastTransfer && settings.transferCooldownDays > 0) {
-      const daysSince = (new Date() - new Date(lastTransfer)) / (1000 * 60 * 60 * 24);
-      if (daysSince < settings.transferCooldownDays) {
-         const daysLeft = Math.ceil(settings.transferCooldownDays - daysSince);
-         showNotification(`You can only transfer commission every ${settings.transferCooldownDays} days. Please wait ${daysLeft} more day(s).`);
-         return;
-      }
-    }
-
-    // Mocking the transfer logic
-    showNotification(`Rs${availableCommission} transferred to your main wallet successfully!`, 'success');
-    localStorage.setItem('last_commission_transfer', new Date().toISOString());
-    localStorage.setItem('available_commission', '0');
-    setAvailableCommission(0);
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/api/transfer-commission`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId: user.id, amount: availableCommission })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showNotification(data.error);
+        } else {
+          showNotification(`Rs${availableCommission} transferred to your main wallet successfully!`, 'success');
+          localStorage.setItem('last_commission_transfer', new Date().toISOString());
+          setAvailableCommission(0);
+          
+          // Optionally update local user balance
+          const updatedUser = { ...user, balance: (Number(user.balance) || 0) + availableCommission };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      })
+      .catch(err => {
+        console.error('Transfer failed', err);
+        showNotification('Transfer failed. Please try again.');
+      });
   };
 
   const handleCopyLink = () => {
@@ -71,30 +83,63 @@ const TeamPage = () => {
       setSettings(JSON.parse(saved));
     }
     
-    // Fetch real team data from backend using user.id
-    fetch(`${API_BASE_URL}/api/team/${user.id || user.name}`)
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    // Fetch real team data from backend
+    fetch(`${API_BASE_URL}/api/team`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => {
-        if (data && data.team) {
-          const members = data.team.map(m => ({
-            id: m.id,
-            username: m.name,
-            joined: m.joined,
-            plan: m.plan && String(m.plan).toLowerCase() !== 'none' ? m.plan : 'No Package',
-            level: 'Level 1',
-            commission: 'Rs' + (data.commissions.find(c => c.description.includes(m.name))?.amount || 0)
+        if (data) {
+          const membersMap = new Map();
+
+          // Add level 1 team members
+          if (data.team) {
+            data.team.forEach(m => {
+              membersMap.set(m.id, {
+                id: m.id,
+                username: m.name,
+                joined: m.joined,
+                plan: m.plan && String(m.plan).toLowerCase() !== 'none' ? m.plan : 'No Package',
+                level: 'Level 1',
+                commission: 0
+              });
+            });
+          }
+
+          // Add commissions for level 1, 2, 3
+          if (data.commissions) {
+            data.commissions.forEach(c => {
+              const existing = membersMap.get(c.referred_user_id);
+              if (existing) {
+                existing.commission += c.commission_amount;
+                existing.plan = c.package_name; // override with the actual package that gave commission
+                existing.level = `Level ${c.level}`;
+              } else {
+                membersMap.set(c.referred_user_id, {
+                  id: c.referred_user_id,
+                  username: c.referred_name || 'User',
+                  joined: 'Active',
+                  plan: c.package_name,
+                  level: `Level ${c.level}`,
+                  commission: c.commission_amount
+                });
+              }
+            });
+          }
+
+          const members = Array.from(membersMap.values()).map(m => ({
+            ...m,
+            commission: 'Rs' + m.commission
           }));
-          setTeamMembers(members);
-          setTotalReferrals(members.length);
           
-          const calcCommission = members.reduce((sum, m) => sum + (Number(m.commission?.replace('Rs', '')) || 0), 0);
-          setTotalCommission(calcCommission);
+          setTeamMembers(members);
+          setTotalReferrals(data.team ? data.team.length : 0);
+          setTotalCommission(data.totalCommission || 0);
+          setAvailableCommission(data.availableCommission || 0);
         }
       })
       .catch(err => console.error('Failed to fetch team', err));
-    
-    const savedAvail = Number(localStorage.getItem('available_commission')) || 0;
-    setAvailableCommission(savedAvail);
   }, []);
 
   return (
@@ -164,12 +209,12 @@ const TeamPage = () => {
         </div>
         <button 
           onClick={handleTransfer}
-          style={{ width: '100%', padding: '14px', background: 'var(--text-dark)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'background 0.2s' }}
+          style={{ width: '100%', padding: '14px', background: totalReferrals >= 10 ? 'var(--text-dark)' : '#e2e8f0', color: totalReferrals >= 10 ? 'white' : '#94a3b8', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: totalReferrals >= 10 ? 'pointer' : 'not-allowed', transition: 'background 0.2s' }}
         >
-          Transfer to Main Wallet <ArrowRight size={18} />
+          {totalReferrals >= 10 ? 'Transfer to Main Wallet' : 'Locked'} <ArrowRight size={18} />
         </button>
         <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#b45309', fontWeight: '700' }}>
-          Min Transfer: Rs{settings.minTransferAmount || 0} • Frequency: {settings.transferCooldownDays} Days
+          {totalReferrals >= 10 ? 'Unlocked: No minimum balance required' : `Unlock Transfer After 10 Referrals (Progress: ${totalReferrals} / 10)`}
         </div>
       </div>
 

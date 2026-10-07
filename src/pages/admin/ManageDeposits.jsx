@@ -75,7 +75,12 @@ const ManageDeposits = () => {
         fetch(`${API_BASE_URL}/api/distribute-commission`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-           body: JSON.stringify({ userId: approvedDeposit.userId, amount: approvedDeposit.amount })
+           body: JSON.stringify({ 
+             userId: approvedDeposit.userId, 
+             amount: approvedDeposit.amount,
+             depositId: approvedDeposit.id,
+             planName: approvedDeposit.planName
+           })
         }).catch(err => console.error('Failed to distribute commission', err));
       }
       
