@@ -107,6 +107,13 @@ const WithdrawPage = () => {
       return;
     }
 
+    // Check if available balance is less than minimum withdrawal limit
+    if (calculatedBalance < minLimit) {
+      setToastMessage(`آپ کا balance Rs${calculatedBalance.toLocaleString()} ہے جو minimum limit Rs${minLimit.toLocaleString()} سے کم ہے۔ Withdrawal ممکن نہیں۔`);
+      setTimeout(() => setToastMessage(null), 5000);
+      return;
+    }
+
     if (amount < minLimit) {
       setToastMessage(`Minimum withdrawal for ${selectedGateway.name} is Rs${minLimit.toLocaleString()}. Please enter at least Rs${minLimit.toLocaleString()}.`);
       setTimeout(() => setToastMessage(null), 4000);

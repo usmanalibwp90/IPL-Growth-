@@ -543,6 +543,50 @@ app.post('/api/withdrawals', async (c) => {
     const { id, userId, user, amount, method, accountDetails, date, status } = await c.req.json();
     if (!userId || !amount || !method) return c.json({ error: 'Missing required fields' }, 400);
 
+    const withdrawAmount = parseFloat(String(amount).replace(/[^0-9.-]+/g, '')) || 0;
+
+    // --- Backend balance & minimum limit validation ---
+    // 1. Get gateway minLimit from gateways table
+    const gatewayRow = await c.env.DB.prepare(
+      `SELECT details FROM gateways WHERE name = ? AND type = 'withdraw' LIMIT 1`
+    ).bind(method).first();
+
+    let minLimit = 500; // default minimum
+    if (gatewayRow?.details) {
+      try {
+        const parsed = JSON.parse(String(gatewayRow.details));
+        minLimit = parseFloat(parsed.minLimit || 500);
+      } catch (_) {}
+    }
+
+    if (withdrawAmount < minLimit) {
+      return c.json({ error: `Minimum withdrawal for ${method} is Rs${minLimit}. You entered Rs${withdrawAmount}.` }, 400);
+    }
+
+    // 2. Get user balance
+    const userRow = await c.env.DB.prepare(
+      `SELECT balance FROM users WHERE id = ?`
+    ).bind(userId).first();
+    const userBalance = parseFloat(String(userRow?.balance || 0));
+
+    // Check if user balance is below the minimum limit
+    if (userBalance < minLimit) {
+      return c.json({ error: `Aap ka balance Rs${userBalance} hai jo minimum limit Rs${minLimit} se kam hai. Withdrawal mumkin nahi.` }, 400);
+    }
+
+    // 3. Calculate total pending/approved withdrawals to get available balance
+    const withdrawalsResult = await c.env.DB.prepare(
+      `SELECT SUM(CAST(amount AS REAL)) as total FROM withdrawals WHERE userId = ? AND status != 'Rejected'`
+    ).bind(userId).first();
+    const totalWithdrawn = parseFloat(String(withdrawalsResult?.total || 0));
+
+    const availableBalance = userBalance - totalWithdrawn;
+
+    if (withdrawAmount > availableBalance) {
+      return c.json({ error: `Insufficient balance. Available: Rs${availableBalance.toFixed(2)}, Requested: Rs${withdrawAmount}.` }, 400);
+    }
+    // --- End validation ---
+
     await c.env.DB.prepare(
       `INSERT INTO withdrawals (id, userId, user, amount, method, accountDetails, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(id, userId, user, amount, method, accountDetails, date, status || 'Pending').run();
