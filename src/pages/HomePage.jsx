@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
+import { Menu, Crown, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const HomePage = () => {
