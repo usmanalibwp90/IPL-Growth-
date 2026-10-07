@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Calendar, CheckCircle, Gift, Zap, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const plansData = [
   { name: 'Plan 1', daily: 83 },
@@ -77,39 +78,54 @@ const MyTaskPage = () => {
     return () => clearInterval(timer);
   }, [backendState]);
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (!isReady) return;
     
-    // Backend API simulation
-    const now = Date.now();
-    const next = now + (24 * 60 * 60 * 1000); // exactly 24 hours from now
-
-    const newState = {
-      ...backendState,
-      last_profit_claim_at: now,
-      next_profit_available_at: next
-    };
-
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const currentUserId = user.id || user.email;
-    const userTaskKey = currentUserId ? `ipl_user_data_${currentUserId}` : 'ipl_user_data';
-    localStorage.setItem(userTaskKey, JSON.stringify(newState));
-    
-    // Add to transaction history (mock)
-    const txHistory = JSON.parse(localStorage.getItem('ipl_transactions') || '[]');
-    txHistory.unshift({
-      id: Date.now(),
-      userId: currentUserId,
-      type: 'profit',
-      amount: backendState.daily_profit_amount,
-      date: now,
-      status: 'completed'
-    });
-    localStorage.setItem('ipl_transactions', JSON.stringify(txHistory));
-    
-    setBackendState(newState);
-    setSuccessMsg('Daily Profit Credited Successfully');
-    setTimeout(() => setSuccessMsg(''), 4000);
+    if (!currentUserId) return;
+
+    try {
+      const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
+      const now = Date.now();
+      const dateStr = new Date().toISOString();
+      
+      const res = await fetch(`${API_BASE_URL}/api/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: trxId,
+          userId: currentUserId,
+          user: user.name || user.email,
+          type: 'profit',
+          amount: backendState.daily_profit_amount,
+          date: dateStr,
+          description: `Daily Profit Claimed for ${backendState.active_plan_id}`
+        })
+      });
+
+      if (!res.ok) {
+         throw new Error('Failed to claim profit');
+      }
+
+      const next = now + (24 * 60 * 60 * 1000); // exactly 24 hours from now
+
+      const newState = {
+        ...backendState,
+        last_profit_claim_at: now,
+        next_profit_available_at: next
+      };
+
+      const userTaskKey = currentUserId ? `ipl_user_data_${currentUserId}` : 'ipl_user_data';
+      localStorage.setItem(userTaskKey, JSON.stringify(newState));
+      
+      setBackendState(newState);
+      setSuccessMsg('Daily Profit Credited Successfully');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (error) {
+      console.error(error);
+      alert('Error claiming profit. Please try again.');
+    }
   };
 
   // Format time
