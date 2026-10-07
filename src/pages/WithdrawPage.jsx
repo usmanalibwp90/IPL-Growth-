@@ -96,6 +96,35 @@ const WithdrawPage = () => {
   const handleWithdrawSubmit = (e) => {
     e.preventDefault();
 
+    // Validate amount against gateway min/max limits
+    const amount = parseFloat(withdrawAmount);
+    const minLimit = parseFloat(selectedGateway.originalData?.minLimit || 0);
+    const maxLimit = parseFloat(selectedGateway.originalData?.maxLimit || 999999999);
+
+    if (isNaN(amount) || amount <= 0) {
+      setToastMessage('Please enter a valid withdrawal amount.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    if (amount < minLimit) {
+      setToastMessage(`Minimum withdrawal for ${selectedGateway.name} is Rs${minLimit.toLocaleString()}. Please enter at least Rs${minLimit.toLocaleString()}.`);
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+
+    if (amount > maxLimit) {
+      setToastMessage(`Maximum withdrawal for ${selectedGateway.name} is Rs${maxLimit.toLocaleString()}. Please enter Rs${maxLimit.toLocaleString()} or less.`);
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+
+    if (amount > calculatedBalance) {
+      setToastMessage(`Insufficient balance. Your available balance is Rs${calculatedBalance.toLocaleString()}.`);
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     const newTransaction = {
