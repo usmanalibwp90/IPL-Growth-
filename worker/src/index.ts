@@ -613,10 +613,10 @@ app.post('/api/distribute-commission', adminAuth, async (c) => {
 app.get('/api/team/:username', async (c) => {
   const username = c.req.param('username');
   try {
-    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ?`).bind(username).all();
+    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ? OR upliner = (SELECT name FROM users WHERE id = ? LIMIT 1)`).bind(username, username).all();
     
     // Calculate commission directly from transactions
-    const { results: commissions } = await c.env.DB.prepare(`SELECT description, amount FROM transactions WHERE user = ? AND type = 'Team Commission'`).bind(username).all();
+    const { results: commissions } = await c.env.DB.prepare(`SELECT description, amount FROM transactions WHERE (user = ? OR user = (SELECT name FROM users WHERE id = ? LIMIT 1)) AND type = 'Team Commission'`).bind(username, username).all();
     
     return c.json({ team: results || [], commissions: commissions || [] });
   } catch (err: any) {

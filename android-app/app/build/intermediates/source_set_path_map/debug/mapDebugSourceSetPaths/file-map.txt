@@ -1,0 +1,32 @@
+com.iplgrowth.app-jetified-lifecycle-process-2.4.1-0 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\079d8378730351ac456a23bb5361a977\transformed\jetified-lifecycle-process-2.4.1\res
+com.iplgrowth.app-drawerlayout-1.1.1-1 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\0a45e5f6f820a3f4906510bdcb11d848\transformed\drawerlayout-1.1.1\res
+com.iplgrowth.app-jetified-savedstate-1.2.0-2 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\0b8dcde890c0623ace8fa64faa512d23\transformed\jetified-savedstate-1.2.0\res
+com.iplgrowth.app-appcompat-1.6.1-3 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\19931bb929a594a51f48b7e3a152e7de\transformed\appcompat-1.6.1\res
+com.iplgrowth.app-swiperefreshlayout-1.1.0-4 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\254419ab5741d78c15e01a1590d61b70\transformed\swiperefreshlayout-1.1.0\res
+com.iplgrowth.app-core-1.9.0-5 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\res
+com.iplgrowth.app-cardview-1.0.0-6 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3fb14be0712bb56f733b96a108c6e833\transformed\cardview-1.0.0\res
+com.iplgrowth.app-lifecycle-viewmodel-2.5.1-7 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\46ca2c1e9db149efb4790001a2294863\transformed\lifecycle-viewmodel-2.5.1\res
+com.iplgrowth.app-lifecycle-livedata-core-2.5.1-8 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\473effc423f1c5b0764b879a9ee8e855\transformed\lifecycle-livedata-core-2.5.1\res
+com.iplgrowth.app-jetified-core-ktx-1.9.0-9 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\4b99d012ffe7974a38d4788279d179c4\transformed\jetified-core-ktx-1.9.0\res
+com.iplgrowth.app-constraintlayout-2.1.4-10 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\4e622fb774a3de83917e489664a5436e\transformed\constraintlayout-2.1.4\res
+com.iplgrowth.app-recyclerview-1.1.0-11 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\5e4126d5a27c3e08e1eddc0533df140b\transformed\recyclerview-1.1.0\res
+com.iplgrowth.app-coordinatorlayout-1.1.0-12 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\6c9f16e055b2d460aa83b809b443e26a\transformed\coordinatorlayout-1.1.0\res
+com.iplgrowth.app-lifecycle-runtime-2.5.1-13 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\747b0c9d62e8d2af3ddf134c8246f6cb\transformed\lifecycle-runtime-2.5.1\res
+com.iplgrowth.app-jetified-emoji2-views-helper-1.2.0-14 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\8e550c32676eefb4817d217bcc9d162b\transformed\jetified-emoji2-views-helper-1.2.0\res
+com.iplgrowth.app-fragment-1.3.6-15 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\9407124d1591d82dd95644dbbd8b68f5\transformed\fragment-1.3.6\res
+com.iplgrowth.app-material-1.9.0-16 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\9a6c5c7dbffd7046a7f4b1262471b786\transformed\material-1.9.0\res
+com.iplgrowth.app-jetified-startup-runtime-1.1.1-17 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\9e00fa4c148a84ea610230f2532c52ae\transformed\jetified-startup-runtime-1.1.1\res
+com.iplgrowth.app-transition-1.2.0-18 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\be37dab5b1897588cafaea18daedb3fe\transformed\transition-1.2.0\res
+com.iplgrowth.app-jetified-activity-1.6.0-19 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\c03783f1ae710bc1e53e1976d89eb2cb\transformed\jetified-activity-1.6.0\res
+com.iplgrowth.app-jetified-viewpager2-1.0.0-20 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\d014f23755aedbe8ed1d2473beee8562\transformed\jetified-viewpager2-1.0.0\res
+com.iplgrowth.app-jetified-emoji2-1.2.0-21 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\res
+com.iplgrowth.app-jetified-lifecycle-viewmodel-savedstate-2.5.1-22 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\e27c5e035ff58886726a500ad42fb1dc\transformed\jetified-lifecycle-viewmodel-savedstate-2.5.1\res
+com.iplgrowth.app-jetified-appcompat-resources-1.6.1-23 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\f32774fc2261e669045cf46d7a0eb503\transformed\jetified-appcompat-resources-1.6.1\res
+com.iplgrowth.app-jetified-annotation-experimental-1.3.0-24 C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\fab91b88bbb344684bc0964071f1037d\transformed\jetified-annotation-experimental-1.3.0\res
+com.iplgrowth.app-pngs-25 C:\wamp64\www\islamic profit Limited\android-app\app\build\generated\res\pngs\debug
+com.iplgrowth.app-resValues-26 C:\wamp64\www\islamic profit Limited\android-app\app\build\generated\res\resValues\debug
+com.iplgrowth.app-packageDebugResources-27 C:\wamp64\www\islamic profit Limited\android-app\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.iplgrowth.app-packageDebugResources-28 C:\wamp64\www\islamic profit Limited\android-app\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.iplgrowth.app-debug-29 C:\wamp64\www\islamic profit Limited\android-app\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.iplgrowth.app-debug-30 C:\wamp64\www\islamic profit Limited\android-app\app\src\debug\res
+com.iplgrowth.app-main-31 C:\wamp64\www\islamic profit Limited\android-app\app\src\main\res

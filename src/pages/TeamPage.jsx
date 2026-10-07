@@ -57,7 +57,7 @@ const TeamPage = () => {
   };
 
   const handleCopyLink = () => {
-    const link = `https://islamicprofit.com/register?ref=${user.username || user.name || user.id || 'guest_user'}`;
+    const link = `${window.location.origin}/register?ref=${user.id || 'guest_user'}`;
     navigator.clipboard.writeText(link).then(() => {
       showNotification('Referral link copied to clipboard!', 'success');
     }).catch(() => {
@@ -71,8 +71,8 @@ const TeamPage = () => {
       setSettings(JSON.parse(saved));
     }
     
-    // Fetch real team data from backend
-    fetch(`${API_BASE_URL}/api/team/${user.username || user.name}`)
+    // Fetch real team data from backend using user.id
+    fetch(`${API_BASE_URL}/api/team/${user.id || user.name}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.team) {
@@ -80,6 +80,7 @@ const TeamPage = () => {
             id: m.id,
             username: m.name,
             joined: m.joined,
+            plan: m.plan && String(m.plan).toLowerCase() !== 'none' ? m.plan : 'No Package',
             level: 'Level 1',
             commission: 'Rs' + (data.commissions.find(c => c.description.includes(m.name))?.amount || 0)
           }));
@@ -122,7 +123,7 @@ const TeamPage = () => {
         
         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '12px', backdropFilter: 'blur(5px)' }}>
           <div style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            https://islamicprofit.com/register?ref={user.username || user.name || user.id || 'guest_user'}
+            {window.location.origin}/register?ref={user.id || 'guest_user'}
           </div>
           <button onClick={handleCopyLink} style={{ background: 'white', color: '#d97706', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }} onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
             <Copy size={16} /> Copy
@@ -203,7 +204,7 @@ const TeamPage = () => {
                 <div>
                   <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-dark)' }}>{member.username}</h4>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                    Joined: {member.joined}
+                    Joined: {member.joined} • Package: <span style={{ color: member.plan === 'No Package' ? '#ef4444' : '#10b981' }}>{member.plan}</span>
                   </div>
                 </div>
               </div>

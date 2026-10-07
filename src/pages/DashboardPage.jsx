@@ -208,7 +208,7 @@ const DashboardPage = () => {
   }, []);
 
   const handleCopyLink = () => {
-    const link = `${window.location.origin}/register?ref=${user.username || user.id || 'guest_user'}`;
+    const link = `${window.location.origin}/register?ref=${user.id || 'guest_user'}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -429,7 +429,7 @@ const DashboardPage = () => {
         <div style={{ overflow: 'hidden' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600' }}>Referral Link</div>
           <div style={{ fontSize: '0.85rem', color: '#d97706', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '700' }}>
-            {window.location.origin}/register?ref={user.username || user.id || 'guest_user'}
+            {window.location.origin}/register?ref={user.id || 'guest_user'}
           </div>
         </div>
         <button onClick={handleCopyLink} style={{ border: 'none', background: copied ? '#10b981' : 'var(--gradient-gold)', padding: '10px', borderRadius: '10px', color: 'white', cursor: 'pointer', marginLeft: '12px', boxShadow: copied ? '0 4px 10px rgba(16, 185, 129, 0.2)' : '0 4px 10px rgba(234, 88, 12, 0.2)', transition: 'all 0.3s' }}>

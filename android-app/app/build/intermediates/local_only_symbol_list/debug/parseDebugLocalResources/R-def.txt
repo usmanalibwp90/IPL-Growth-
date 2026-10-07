@@ -1,0 +1,17 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color primary
+color white
+id btnRetry
+id logo
+id noInternetLayout
+id swipeRefresh
+id webView
+layout activity_main
+layout activity_splash
+mipmap ic_launcher
+string app_name
+style Theme.IPLGrowth
+style Theme.IPLGrowth.NoActionBar
+xml file_paths

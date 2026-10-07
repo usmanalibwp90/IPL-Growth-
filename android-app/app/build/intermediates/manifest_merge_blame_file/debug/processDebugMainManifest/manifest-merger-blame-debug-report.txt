@@ -1,0 +1,135 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.iplgrowth.app"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:5:5-67
+11-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:5:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:6:5-79
+12-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:6:22-76
+13    <uses-permission
+13-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:7:5-107
+14        android:name="android.permission.READ_EXTERNAL_STORAGE"
+14-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:7:22-77
+15        android:maxSdkVersion="32" />
+15-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:7:78-104
+16    <uses-permission
+16-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:8:5-108
+17        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+17-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:8:22-78
+18        android:maxSdkVersion="32" />
+18-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:8:79-105
+19    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+19-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:9:5-76
+19-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:9:22-73
+20    <uses-permission android:name="android.permission.CAMERA" />
+20-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:10:5-65
+20-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:10:22-62
+21
+22    <permission
+22-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:22:5-24:47
+23        android:name="com.iplgrowth.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+23-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:23:9-81
+24        android:protectionLevel="signature" />
+24-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:24:9-44
+25
+26    <uses-permission android:name="com.iplgrowth.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+26-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:26:5-97
+26-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
+27
+28    <application
+28-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:12:5-46:19
+29        android:allowBackup="true"
+29-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:13:9-35
+30        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+30-->[androidx.core:core:1.9.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\3c3bc45a19559eaa2c94406ef8623409\transformed\core-1.9.0\AndroidManifest.xml:28:18-86
+31        android:debuggable="true"
+32        android:extractNativeLibs="false"
+33        android:icon="@mipmap/ic_launcher"
+33-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:14:9-43
+34        android:label="@string/app_name"
+34-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:15:9-41
+35        android:roundIcon="@mipmap/ic_launcher"
+35-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:16:9-48
+36        android:supportsRtl="true"
+36-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:17:9-35
+37        android:theme="@style/Theme.IPLGrowth"
+37-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:18:9-47
+38        android:usesCleartextTraffic="true" >
+38-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:19:9-44
+39        <activity
+39-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:21:9-29:20
+40            android:name="com.iplgrowth.app.SplashActivity"
+40-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:22:13-43
+41            android:exported="true"
+41-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:23:13-36
+42            android:theme="@style/Theme.IPLGrowth.NoActionBar" >
+42-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:24:13-63
+43            <intent-filter>
+43-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:25:13-28:29
+44                <action android:name="android.intent.action.MAIN" />
+44-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:26:17-69
+44-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:26:25-66
+45
+46                <category android:name="android.intent.category.LAUNCHER" />
+46-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:27:17-77
+46-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:27:27-74
+47            </intent-filter>
+48        </activity>
+49        <activity
+49-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:31:9-35:20
+50            android:name="com.iplgrowth.app.MainActivity"
+50-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:32:13-41
+51            android:exported="false"
+51-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:33:13-37
+52            android:theme="@style/Theme.IPLGrowth.NoActionBar" >
+52-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:34:13-63
+53        </activity>
+54
+55        <provider
+56            android:name="androidx.core.content.FileProvider"
+56-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:38:13-62
+57            android:authorities="com.iplgrowth.app.fileprovider"
+57-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:39:13-64
+58            android:exported="false"
+58-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:40:13-37
+59            android:grantUriPermissions="true" >
+59-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:41:13-47
+60            <meta-data
+60-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:42:13-44:54
+61                android:name="android.support.FILE_PROVIDER_PATHS"
+61-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:43:17-67
+62                android:resource="@xml/file_paths" />
+62-->C:\wamp64\www\islamic profit Limited\android-app\app\src\main\AndroidManifest.xml:44:17-51
+63        </provider>
+64        <provider
+64-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+65            android:name="androidx.startup.InitializationProvider"
+65-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:25:13-67
+66            android:authorities="com.iplgrowth.app.androidx-startup"
+66-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:26:13-68
+67            android:exported="false" >
+67-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:27:13-37
+68            <meta-data
+68-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+69                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+69-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:30:17-75
+70                android:value="androidx.startup" />
+70-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\de088626167ddbd1e90e471ebf099f85\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:31:17-49
+71            <meta-data
+71-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\079d8378730351ac456a23bb5361a977\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
+72                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+72-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\079d8378730351ac456a23bb5361a977\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
+73                android:value="androidx.startup" />
+73-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\Quality Computer\.gradle\caches\9.6.0\transforms\079d8378730351ac456a23bb5361a977\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
+74        </provider>
+75    </application>
+76
+77</manifest>
