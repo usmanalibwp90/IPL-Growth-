@@ -731,5 +731,26 @@ app.post('/api/gateways', adminAuth, async (c) => {
   }
 });
 
+app.put('/api/gateways/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    const { type, name, details } = await c.req.json();
+    await c.env.DB.prepare(`UPDATE payment_gateways SET type = ?, name = ?, details = ? WHERE id = ?`).bind(type, name, details, id).run();
+    return c.json({ message: 'Gateway updated' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+app.delete('/api/gateways/:id', adminAuth, async (c) => {
+  const id = c.req.param('id');
+  try {
+    await c.env.DB.prepare(`DELETE FROM payment_gateways WHERE id = ?`).bind(id).run();
+    return c.json({ message: 'Gateway deleted' });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
 export default app
 

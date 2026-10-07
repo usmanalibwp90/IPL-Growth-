@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Edit, Plus, Save, Trash2, Power } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const initialMethods = [
   { id: 1, name: 'Jazz cash', type: 'jazzcash', processingTime: '24 Hours', minLimit: 10, maxLimit: 1000000, charge: 0, isActive: true, iconImage: null },
@@ -13,29 +14,65 @@ const ManageWithdrawMethods = () => {
   const [methods, setMethods] = useState([]);
   const [editingMethod, setEditingMethod] = useState(null);
 
+  const fetchList = () => {
+    fetch(`${API_BASE_URL}/api/gateways/withdraw`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const parsed = data.map(g => ({
+             ...JSON.parse(g.details || '{}'),
+             id: g.id
+          }));
+          setMethods(parsed);
+        } else {
+          setMethods(initialMethods);
+        }
+      })
+      .catch(err => {
+         console.error(err);
+         const saved = localStorage.getItem('withdraw_methods');
+         if (saved) setMethods(JSON.parse(saved));
+         else setMethods(initialMethods);
+      });
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem('withdraw_methods');
-    if (saved) {
-      setMethods(JSON.parse(saved));
-    } else {
-      setMethods(initialMethods);
-    }
+    fetchList();
   }, []);
 
-  const saveToStorage = (newData) => {
-    setMethods(newData);
-    localStorage.setItem('withdraw_methods', JSON.stringify(newData));
+  const handleToggleStatus = async (id) => {
+    const method = methods.find(m => m.id === id);
+    if (!method) return;
+    const updated = { ...method, isActive: !method.isActive };
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    if (method.id && method.id > 10) {
+      await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'withdraw', name: updated.name, details: JSON.stringify(updated) })
+      });
+      fetchList();
+    } else {
+      setMethods(methods.map(m => m.id === id ? updated : m));
+      localStorage.setItem('withdraw_methods', JSON.stringify(methods.map(m => m.id === id ? updated : m)));
+    }
   };
 
-  const handleToggleStatus = (id) => {
-    const updated = methods.map(m => m.id === id ? { ...m, isActive: !m.isActive } : m);
-    saveToStorage(updated);
-  };
-
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if(window.confirm('Are you sure you want to delete this withdraw method?')) {
-      const updated = methods.filter(m => m.id !== id);
-      saveToStorage(updated);
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (id > 10) {
+         await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+         });
+         fetchList();
+      } else {
+         const updated = methods.filter(m => m.id !== id);
+         setMethods(updated);
+         localStorage.setItem('withdraw_methods', JSON.stringify(updated));
+      }
     }
   };
 
@@ -50,18 +87,26 @@ const ManageWithdrawMethods = () => {
     }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    let updated;
-    if (editingMethod.id) {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    if (editingMethod.id && editingMethod.id > 10) {
       // Update existing
-      updated = methods.map(m => m.id === editingMethod.id ? editingMethod : m);
+      await fetch(`${API_BASE_URL}/api/gateways/${editingMethod.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'withdraw', name: editingMethod.name, details: JSON.stringify(editingMethod) })
+      });
     } else {
       // Add new
-      const newId = methods.length > 0 ? Math.max(...methods.map(m => m.id)) + 1 : 1;
-      updated = [...methods, { ...editingMethod, id: newId }];
+      await fetch(`${API_BASE_URL}/api/gateways`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'withdraw', name: editingMethod.name, details: JSON.stringify(editingMethod) })
+      });
     }
-    saveToStorage(updated);
+    fetchList();
     setEditingMethod(null);
   };
 

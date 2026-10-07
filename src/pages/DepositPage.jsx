@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const DepositPage = () => {
   const navigate = useNavigate();
@@ -10,28 +11,37 @@ const DepositPage = () => {
   const [toastMessage, setToastMessage] = useState(null);
   
   useEffect(() => {
-    const saved = localStorage.getItem('withdraw_methods');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const active = parsed.filter(g => g.isActive).map(g => ({
-        id: g.id,
-        name: g.name,
-        icon: g.iconImage || (g.type === 'easypaisa' ? '/easypaisa.png' : g.type === 'jazzcash' ? '/jazzcash.png' : 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'),
-        min: `Rs${g.minLimit}.00`,
-        max: `Rs${Number(g.maxLimit).toLocaleString()}.00`,
-        fee: `Rs0.00 + ${g.charge}%`,
-        originalData: g
-      }));
-      setGateways(active);
-    } else {
-      setGateways([
-        { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 3, name: 'SADAPAY', icon: '/sadapay.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-        { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-      ]);
-    }
+    fetch(`${API_BASE_URL}/api/gateways/deposit`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const active = data.filter(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return parsed.isActive !== false;
+          }).map(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return {
+              id: g.id,
+              name: g.name,
+              icon: parsed.iconImage || (parsed.type === 'easypaisa' ? '/easypaisa.png' : parsed.type === 'jazzcash' ? '/jazzcash.png' : 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'),
+              min: `Rs${parsed.minLimit || 500}.00`,
+              max: `Rs${Number(parsed.maxLimit || 50000).toLocaleString()}.00`,
+              fee: `Rs0.00 + 0.00%`, // deposits usually have no charge, or parsed.charge if any
+              originalData: parsed
+            };
+          });
+          setGateways(active);
+        } else {
+          setGateways([
+            { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 3, name: 'SADAPAY', icon: '/sadapay.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
+            { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
+          ]);
+        }
+      })
+      .catch(err => console.error('Failed to load deposit gateways', err));
 
     const rawUser = localStorage.getItem('user');
     if (rawUser) {

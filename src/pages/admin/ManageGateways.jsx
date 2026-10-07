@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Edit, Plus, Save, Trash2, Power } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const initialGateways = [
   { id: 1, name: 'EasyPaisa', type: 'easypaisa', accountName: 'Ali Raza', accountNumber: '03451234567', minLimit: 500, maxLimit: 50000, isActive: true },
@@ -11,29 +12,65 @@ const ManageGateways = () => {
   const [gateways, setGateways] = useState([]);
   const [editingGateway, setEditingGateway] = useState(null);
 
+  const fetchList = () => {
+    fetch(`${API_BASE_URL}/api/gateways/deposit`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const parsed = data.map(g => ({
+             ...JSON.parse(g.details || '{}'),
+             id: g.id
+          }));
+          setGateways(parsed);
+        } else {
+          setGateways(initialGateways);
+        }
+      })
+      .catch(err => {
+         console.error(err);
+         const saved = localStorage.getItem('payment_gateways');
+         if (saved) setGateways(JSON.parse(saved));
+         else setGateways(initialGateways);
+      });
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem('payment_gateways');
-    if (saved) {
-      setGateways(JSON.parse(saved));
-    } else {
-      setGateways(initialGateways);
-    }
+    fetchList();
   }, []);
 
-  const saveToStorage = (newData) => {
-    setGateways(newData);
-    localStorage.setItem('payment_gateways', JSON.stringify(newData));
+  const handleToggleStatus = async (id) => {
+    const gateway = gateways.find(g => g.id === id);
+    if (!gateway) return;
+    const updated = { ...gateway, isActive: !gateway.isActive };
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    if (gateway.id && gateway.id > 10) { // Assume > 10 means it came from DB (initial are 1-5)
+      await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'deposit', name: updated.name, details: JSON.stringify(updated) })
+      });
+      fetchList();
+    } else {
+      setGateways(gateways.map(g => g.id === id ? updated : g));
+      localStorage.setItem('payment_gateways', JSON.stringify(gateways.map(g => g.id === id ? updated : g)));
+    }
   };
 
-  const handleToggleStatus = (id) => {
-    const updated = gateways.map(g => g.id === id ? { ...g, isActive: !g.isActive } : g);
-    saveToStorage(updated);
-  };
-
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if(window.confirm('Are you sure you want to delete this payment method?')) {
-      const updated = gateways.filter(g => g.id !== id);
-      saveToStorage(updated);
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (id > 10) {
+         await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+         });
+         fetchList();
+      } else {
+         const updated = gateways.filter(g => g.id !== id);
+         setGateways(updated);
+         localStorage.setItem('payment_gateways', JSON.stringify(updated));
+      }
     }
   };
 
@@ -48,18 +85,26 @@ const ManageGateways = () => {
     }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    let updated;
-    if (editingGateway.id) {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    if (editingGateway.id && editingGateway.id > 10) {
       // Update existing
-      updated = gateways.map(g => g.id === editingGateway.id ? editingGateway : g);
+      await fetch(`${API_BASE_URL}/api/gateways/${editingGateway.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'deposit', name: editingGateway.name, details: JSON.stringify(editingGateway) })
+      });
     } else {
       // Add new
-      const newId = gateways.length > 0 ? Math.max(...gateways.map(g => g.id)) + 1 : 1;
-      updated = [...gateways, { ...editingGateway, id: newId }];
+      await fetch(`${API_BASE_URL}/api/gateways`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'deposit', name: editingGateway.name, details: JSON.stringify(editingGateway) })
+      });
     }
-    saveToStorage(updated);
+    fetchList();
     setEditingGateway(null);
   };
 
