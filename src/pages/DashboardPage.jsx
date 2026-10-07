@@ -146,18 +146,18 @@ const DashboardPage = () => {
 
       // Calculate real-time balance and stats
       // Fetch deposits, withdrawals, profits from backend for stats
+      let dynamicBalance = Number(u.balance || 0);
+      let totalDeposit = 0;
+      let pendingDeposit = 0;
+      let totalWithdraw = 0;
+      let pendingWithdraw = 0;
+
       try {
         const [depRes, withRes, transRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/deposits/user/${userId}`),
           fetch(`${API_BASE_URL}/api/withdrawals/user/${userId}`),
           fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
         ]);
-        
-        let dynamicBalance = Number(u.balance || 0);
-        let totalDeposit = 0;
-        let pendingDeposit = 0;
-        let totalWithdraw = 0;
-        let pendingWithdraw = 0;
 
         if (depRes.ok) {
           const deposits = await depRes.json();
