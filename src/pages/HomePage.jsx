@@ -206,7 +206,7 @@ const HomePage = () => {
           </div>
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
           {[
             { name: 'Plan 1', invest: 'Rs460', profit: 'Rs4,590' },
             { name: 'Plan 2', invest: 'Rs860', profit: 'Rs8,595' },
@@ -221,45 +221,49 @@ const HomePage = () => {
             { name: 'Plan 11', invest: 'Rs185,560', profit: 'Rs1,855,575' },
             { name: 'Plan 12', invest: 'Rs225,560', profit: 'Rs2,255,580' }
           ].map((plan, i) => {
-            const op = [0.8, 0.9, 1][i % 3];
             return (
               <Link 
                 to="/register"
                 key={i} 
                 style={{ 
-                  borderRadius: '16px', 
-                  background: 'var(--gradient-gold)',
-                  boxShadow: '0 4px 15px rgba(234, 88, 12, 0.25)',
-                  padding: '10px 8px',
+                  borderRadius: '20px', 
+                  background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)',
+                  boxShadow: '0 8px 20px rgba(217, 119, 6, 0.1)',
+                  padding: '16px 12px',
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
                   textDecoration: 'none',
-                  color: 'inherit'
+                  color: 'inherit',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  transition: 'transform 0.2s',
+                  overflow: 'hidden'
                 }}
+                className="plan-card"
               >
+                {/* Decorative background element */}
+                <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '50px', height: '50px', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))', borderRadius: '50%' }}></div>
+
                 {/* Plan Badge */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: '0.7rem', fontWeight: '800', padding: '3px 10px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', position: 'relative', zIndex: 1 }}>
+                  <div style={{ background: 'var(--gradient-gold)', color: '#fff', fontSize: '0.75rem', fontWeight: '900', padding: '4px 14px', borderRadius: '8px', boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {plan.name}
                   </div>
                 </div>
 
                 {/* Values Container */}
-                <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '12px', padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'center', position: 'relative', zIndex: 1 }}>
                   
                   {/* Invest Row */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <span style={{ fontSize: '0.55rem', fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: '0.5px' }}>INVEST</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff' }}>{plan.invest}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px', padding: '8px 4px' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#b45309', letterSpacing: '1px', textTransform: 'uppercase' }}>Invest</span>
+                    <span style={{ fontSize: '1.05rem', fontWeight: '900', color: '#1f2937' }}>{plan.invest}</span>
                   </div>
                   
-                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.2)', width: '80%', margin: '0 auto' }}></div>
-                  
                   {/* Profit Row */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <span style={{ fontSize: '0.55rem', fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: '0.5px' }}>PROFIT</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#fff' }}>{plan.profit}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--gradient-gold)', borderRadius: '12px', padding: '8px 4px', boxShadow: '0 4px 10px rgba(245, 158, 11, 0.2)' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: 'rgba(255,255,255,0.9)', letterSpacing: '1px', textTransform: 'uppercase' }}>Profit</span>
+                    <span style={{ fontSize: '1.05rem', fontWeight: '900', color: '#ffffff' }}>{plan.profit}</span>
                   </div>
 
                 </div>
