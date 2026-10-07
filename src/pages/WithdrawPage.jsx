@@ -11,6 +11,7 @@ const WithdrawPage = () => {
   const [accountName, setAccountName] = useState('');
   const [gateways, setGateways] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
+  const [hasActivePlan, setHasActivePlan] = useState(null); // null means loading
   const [calculatedBalance, setCalculatedBalance] = useState(0);
   
   useEffect(() => {
@@ -58,7 +59,13 @@ const WithdrawPage = () => {
         if (statRes.ok) {
            const s = await statRes.json();
            dynamicBalance = Number(s.balance || 0);
+           const planStr = String(s.plan || '');
+           const isActive = planStr !== '' && planStr !== 'None' && planStr !== 'null' && planStr !== 'undefined';
+           setHasActivePlan(isActive);
+        } else {
+           setHasActivePlan(false);
         }
+        
         if (withRes.ok) {
           const withdrawals = await withRes.json();
           withdrawals.forEach(w => {
@@ -77,7 +84,12 @@ const WithdrawPage = () => {
         }
         setCalculatedBalance(dynamicBalance);
       })
-      .catch(err => console.error("Failed to fetch balance stats", err));
+      .catch(err => {
+        console.error("Failed to fetch balance stats", err);
+        setHasActivePlan(false);
+      });
+    } else {
+      setHasActivePlan(false);
     }
   }, []);
 
@@ -115,6 +127,100 @@ const WithdrawPage = () => {
       navigate('/withdraw-history');
     }, 2500);
   };
+
+  if (hasActivePlan === false) {
+    return (
+      <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto', position: 'relative' }}>
+        {/* Top Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+          <div onClick={() => navigate(-1)} style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+             <ArrowLeft size={20} color="var(--text-dark)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <div style={{ width: '45px', height: '45px', borderRadius: '10px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+               <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+             </div>
+             <div>
+               <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-dark)', fontWeight: '800' }}>Islamic Profit</h1>
+               <p style={{ margin: '2px 0 0 0', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>Withdrawals</p>
+             </div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'white',
+          borderRadius: '24px',
+          padding: '32px 24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
+          border: '1px solid #fef3c7',
+          textAlign: 'center',
+          marginTop: '40px'
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            background: '#fef3c7',
+            color: '#d97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px auto',
+            boxShadow: '0 8px 24px rgba(217, 119, 6, 0.2)'
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1f2937', margin: '0 0 12px 0' }}>Membership Required</h2>
+          
+          <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', margin: '0 0 24px 0', fontWeight: '500' }}>
+            Withdrawals are available for active members only. Please purchase a plan first to activate your membership and unlock the withdrawal feature.
+          </p>
+
+          <button 
+            onClick={() => navigate('/plans')}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: 'var(--gradient-gold)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '16px',
+              fontWeight: '900',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              boxShadow: '0 8px 20px rgba(245, 158, 11, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}
+          >
+            View Plans / Become a Member
+          </button>
+
+          <button 
+            onClick={() => navigate(-1)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: '#f8fafc',
+              color: '#64748b',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              fontWeight: '800',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Maybe Later / Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto', position: 'relative' }}>

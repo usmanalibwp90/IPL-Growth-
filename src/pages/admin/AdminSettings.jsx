@@ -45,7 +45,7 @@ const AdminSettings = () => {
   const [notification, setNotification] = useState({ show: false, message: '' });
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/settings`)
+    fetch(`${API_BASE_URL}/api/settings?t=${new Date().getTime()}`)
       .then(res => res.json())
       .then(data => {
         if (data.maintenance_mode) setMaintenanceMode(data.maintenance_mode === 'true');
