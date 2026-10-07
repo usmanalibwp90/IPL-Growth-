@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Edit, Plus, Save, Trash2, Power } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
-const initialGateways = [
-  { id: 1, name: 'EasyPaisa', type: 'easypaisa', accountName: 'Ali Raza', accountNumber: '03451234567', minLimit: 500, maxLimit: 50000, isActive: true },
-  { id: 2, name: 'JazzCash', type: 'jazzcash', accountName: 'Kamran Khan', accountNumber: '03001234567', minLimit: 500, maxLimit: 50000, isActive: true },
-  { id: 3, name: 'Meezan Bank', type: 'bank', accountName: 'IPL Growth', accountNumber: '01234567891234', minLimit: 1000, maxLimit: 100000, isActive: false }
-];
-
 const ManageGateways = () => {
   const [gateways, setGateways] = useState([]);
   const [editingGateway, setEditingGateway] = useState(null);
@@ -24,12 +18,12 @@ const ManageGateways = () => {
           }));
           setGateways(parsed);
         } else {
-          setGateways(initialGateways);
+          setGateways([]);
         }
       })
       .catch(err => {
          console.error(err);
-         setGateways(initialGateways);
+         setGateways([]);
       });
   };
 
@@ -50,13 +44,6 @@ const ManageGateways = () => {
         body: JSON.stringify({ type: 'deposit', name: updated.name, details: JSON.stringify(updated) })
       });
       fetchList();
-    } else {
-      await fetch(`${API_BASE_URL}/api/gateways`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ type: 'deposit', name: updated.name, details: JSON.stringify(updated) })
-      });
-      fetchList();
     }
   };
 
@@ -70,10 +57,6 @@ const ManageGateways = () => {
             headers: { 'Authorization': `Bearer ${token}` }
          });
          fetchList();
-      } else {
-         const updated = gateways.filter(g => g.id !== id);
-         setGateways(updated);
-         localStorage.setItem('payment_gateways', JSON.stringify(updated));
       }
     }
   };

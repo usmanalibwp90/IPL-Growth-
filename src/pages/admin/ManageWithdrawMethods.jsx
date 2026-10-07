@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Edit, Plus, Save, Trash2, Power } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
-const initialMethods = [
-  { id: 1, name: 'Jazz cash', type: 'jazzcash', processingTime: '24 Hours', minLimit: 10, maxLimit: 1000000, charge: 0, isActive: true, iconImage: null },
-  { id: 2, name: 'Easypaisa', type: 'easypaisa', processingTime: '24 Hours', minLimit: 10, maxLimit: 1000000, charge: 0, isActive: true, iconImage: null },
-  { id: 3, name: 'SADAPAY', type: 'bank', processingTime: '24 Hours', minLimit: 10, maxLimit: 10000, charge: 0, isActive: true, iconImage: null },
-  { id: 4, name: 'NAYAPAY', type: 'bank', processingTime: '24 Hours', minLimit: 10, maxLimit: 10000, charge: 0, isActive: true, iconImage: null },
-  { id: 5, name: 'All bank', type: 'bank', processingTime: '24-48 Hours', minLimit: 10, maxLimit: 1000000, charge: 0, isActive: true, iconImage: null },
-];
-
 const ManageWithdrawMethods = () => {
   const [methods, setMethods] = useState([]);
   const [editingMethod, setEditingMethod] = useState(null);
@@ -26,12 +18,12 @@ const ManageWithdrawMethods = () => {
           }));
           setMethods(parsed);
         } else {
-          setMethods(initialMethods);
+          setMethods([]);
         }
       })
       .catch(err => {
          console.error(err);
-         setMethods(initialMethods);
+         setMethods([]);
       });
   };
 

@@ -33,21 +33,12 @@ const WithdrawPage = () => {
           });
           setGateways(active);
         } else {
-          setGateways([
-            { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-            { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-            { id: 3, name: 'SADAPAY', icon: '/sadapay.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-            { id: 4, name: 'NAYAPAY', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/JazzCash_logo.svg/512px-JazzCash_logo.svg.png', min: 'Rs10.00', max: 'Rs10,000.00', fee: 'Rs0.00 + 0.00%' },
-            { id: 5, name: 'All bank', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-          ]);
+          setGateways([]);
         }
       })
       .catch(err => {
           console.error("Failed to load gateways", err);
-          setGateways([
-            { id: 1, name: 'Jazz cash', icon: '/jazzcash.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' },
-            { id: 2, name: 'Easypaisa', icon: '/easypaisa.png', min: 'Rs10.00', max: 'Rs1,000,000.00', fee: 'Rs0.00 + 0.00%' }
-          ]);
+          setGateways([]);
       });
 
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
