@@ -28,9 +28,9 @@ const AdminSettings = () => {
     heroSubtitle: 'Experience the premium way to grow your digital assets securely and instantly.',
     supportTagline: 'SUPPORT • ASSISTANCE • TRUST',
     supportTitle: 'Need Help?',
-    whatsappNumber: '+923001234567',
+    whatsappNumber: '+923480470267',
     whatsappIcon: '',
-    whatsappChannel: 'https://whatsapp.com/channel/xxx',
+    whatsappChannel: 'https://whatsapp.com/channel/0029Vb8o43nLNSA3rlKG',
     whatsappChannelIcon: '',
     telegramChannel: 't.me/iplgrowth',
     telegramIcon: ''
@@ -82,6 +82,7 @@ const AdminSettings = () => {
 
   const saveGeneralConfig = () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    localStorage.setItem('home_config', JSON.stringify(homeConfig));
     fetch(`${API_BASE_URL}/api/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -98,12 +99,11 @@ const AdminSettings = () => {
       setNotification({ show: true, message: 'Settings saved successfully' });
       setTimeout(() => setNotification({ show: false, message: '' }), 3000);
     })
-    .catch(err => console.error('Failed to save settings', err));
-    
-    setNotification({ show: true, message: 'Settings updated successfully!' });
-    setTimeout(() => {
-      setNotification({ show: false, message: '' });
-    }, 3000);
+    .catch(err => {
+      console.error('Failed to save settings', err);
+      setNotification({ show: true, message: 'Settings saved locally' });
+      setTimeout(() => setNotification({ show: false, message: '' }), 3000);
+    });
   };
 
   return (

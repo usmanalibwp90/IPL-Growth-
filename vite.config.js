@@ -4,11 +4,14 @@ import { defineConfig } from 'vite'
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), cloudflare()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    react(),
+    ...(command === 'build' ? [cloudflare()] : [])
+  ],
   server: {
     proxy: {
       '/api': 'http://localhost:5000'
     }
   }
-})
+}))

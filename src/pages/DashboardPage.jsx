@@ -43,16 +43,27 @@ const DashboardPage = () => {
   });
 
   const [homeConfig, setHomeConfig] = useState({
-    whatsappNumber: '+923001234567',
-    whatsappChannel: 'https://whatsapp.com/channel/xxx',
+    whatsappNumber: '+923480470267',
+    whatsappIcon: '',
+    whatsappChannel: 'https://whatsapp.com/channel/0029Vb8o43nLNSA3rlKG',
+    whatsappChannelIcon: '',
     telegramChannel: 't.me/iplgrowth'
   });
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('home_config');
-    if (savedConfig) {
-      setHomeConfig(JSON.parse(savedConfig));
-    }
+    fetch(`${API_BASE_URL}/api/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.home_config) {
+          try {
+            const parsed = typeof data.home_config === 'string' ? JSON.parse(data.home_config) : data.home_config;
+            setHomeConfig(prev => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error("Failed to parse home_config", e);
+          }
+        }
+      })
+      .catch(err => console.error("Failed to load settings", err));
     
     // Fallback for older global message
     const globalMsg = localStorage.getItem('payment_approved_message');
@@ -431,7 +442,7 @@ const DashboardPage = () => {
         <h3 style={{ fontSize: '1.1rem', marginBottom: '12px', marginLeft: '4px', color: 'var(--text-dark)' }}>Help & Support</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
           
-          <a href={`https://wa.me/${homeConfig.whatsappNumber}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <a href={`https://wa.me/${(homeConfig.whatsappNumber || '+923480470267').replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 8px', gap: '8px', textAlign: 'center', background: 'white' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {homeConfig.whatsappIcon ? <img src={homeConfig.whatsappIcon} alt="Icon" style={{width: '20px', height: '20px', objectFit: 'contain'}} /> : <MessageCircle size={20} />}
@@ -440,7 +451,7 @@ const DashboardPage = () => {
             </div>
           </a>
 
-          <a href={`${homeConfig.whatsappChannel}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <a href={homeConfig.whatsappChannel ? (homeConfig.whatsappChannel.startsWith('http') ? homeConfig.whatsappChannel : `https://${homeConfig.whatsappChannel}`) : 'https://whatsapp.com/channel/0029Vb8o43nLNSA3rlKG'} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="glass-card flex-center" style={{ flexDirection: 'column', padding: '16px 8px', gap: '8px', textAlign: 'center', background: 'white' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {homeConfig.whatsappChannelIcon ? <img src={homeConfig.whatsappChannelIcon} alt="Icon" style={{width: '20px', height: '20px', objectFit: 'contain'}} /> : <Users size={20} />}

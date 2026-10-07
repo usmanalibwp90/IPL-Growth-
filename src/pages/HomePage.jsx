@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Crown, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const HomePage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -19,18 +20,30 @@ const HomePage = () => {
     heroSubtitle: 'Experience the premium way to grow your digital assets securely and instantly.',
     supportTagline: 'SUPPORT • ASSISTANCE • TRUST',
     supportTitle: 'Need Help?',
-    supportDescription: 'Our support team is here for you. Get quick assistance through WhatsApp or give us a call. We are committed to providing reliable support with transparency and trust.',
-    whatsappNumber: '+923001234567',
+    supportDescription: 'Our support team is here for you. Get quick assistance through WhatsApp or join our channel. We are committed to providing reliable support with transparency and trust.',
+    whatsappNumber: '+923480470267',
+    whatsappIcon: '',
+    whatsappChannel: 'https://whatsapp.com/channel/0029Vb8o43nLNSA3rlKG',
+    whatsappChannelIcon: '',
     telegramChannel: 't.me/iplgrowth',
-    callNumber: '+923001234567'
+    callNumber: '+923480470267'
   });
 
   // Auto swipe logic
   useEffect(() => {
-    const savedHomeConfig = localStorage.getItem('home_config');
-    if (savedHomeConfig) {
-      setHomeConfig(JSON.parse(savedHomeConfig));
-    }
+    fetch(`${API_BASE_URL}/api/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.home_config) {
+          try {
+            const parsed = typeof data.home_config === 'string' ? JSON.parse(data.home_config) : data.home_config;
+            setHomeConfig(prev => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error("Failed to parse home_config", e);
+          }
+        }
+      })
+      .catch(err => console.error("Failed to load settings", err));
 
     // Add image background for HomePage
     const originalStyle = document.body.getAttribute('style');
@@ -387,12 +400,13 @@ const HomePage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           
           {/* WhatsApp Number */}
-          <a href={`https://wa.me/${homeConfig.whatsappNumber}`} target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '16px', padding: '16px', display: 'flex', gap: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textDecoration: 'none' }}>
+          <a href={`https://wa.me/${(homeConfig.whatsappNumber || '+923480470267').replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '16px', padding: '16px', display: 'flex', gap: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textDecoration: 'none' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--gradient-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
               {homeConfig.whatsappIcon ? <img src={homeConfig.whatsappIcon} alt="Icon" style={{width: '24px', height: '24px', objectFit: 'contain'}} /> : <MessageCircle size={24} />}
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1f2937', margin: '0 0 4px 0' }}>WhatsApp Number</h3>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1f2937', margin: '0 0 4px 0' }}>WhatsApp Support</h3>
+              <p style={{ fontSize: '0.8rem', color: '#d97706', margin: '0 0 6px 0', fontWeight: '700' }}>{homeConfig.whatsappNumber || '+923480470267'}</p>
               <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 12px 0', lineHeight: '1.3' }}>Chat with our support team for quick assistance.</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ background: '#fef3c7', color: '#b45309', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700' }}>
@@ -406,7 +420,7 @@ const HomePage = () => {
           </a>
 
           {/* WhatsApp Channel */}
-          <a href={`${homeConfig.whatsappChannel}`} target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '16px', padding: '16px', display: 'flex', gap: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textDecoration: 'none' }}>
+          <a href={homeConfig.whatsappChannel ? (homeConfig.whatsappChannel.startsWith('http') ? homeConfig.whatsappChannel : `https://${homeConfig.whatsappChannel}`) : 'https://whatsapp.com/channel/0029Vb8o43nLNSA3rlKG'} target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '16px', padding: '16px', display: 'flex', gap: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textDecoration: 'none' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--gradient-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
               {homeConfig.whatsappChannelIcon ? <img src={homeConfig.whatsappChannelIcon} alt="Icon" style={{width: '24px', height: '24px', objectFit: 'contain'}} /> : <Users size={24} />}
             </div>
