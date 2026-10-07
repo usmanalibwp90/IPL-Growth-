@@ -5,6 +5,13 @@ import { useNavigate } from 'react-router-dom';
 const AppDownloadPage = () => {
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const rawUser = localStorage.getItem('user');
+    if (!rawUser) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   return (
     <div className="page-transition" style={{ padding: '10px', paddingBottom: '100px', maxWidth: 'var(--max-width)', margin: '0 auto' }}>
       

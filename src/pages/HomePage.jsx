@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Crown, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
+import { Menu, LogIn, UserPlus, BarChart2, Award, Star, Image, ChevronRight, Users, ShieldCheck, Globe, Shield, CheckCircle, FileText, ArrowUpRight, Headphones, MessageCircle, MessageSquare, Phone, Clock, ArrowRight, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const HomePage = () => {
@@ -466,9 +466,6 @@ const HomePage = () => {
               </Link>
               <Link to="/register" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '10px', background: '#f8fafc' }}>
                 <UserPlus size={18} color="#d97706" /> Register New Account
-              </Link>
-              <Link to="/app-download" onClick={() => setIsSidebarOpen(false)} style={{ textDecoration: 'none', color: '#1f2937', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '10px', background: '#f8fafc' }}>
-                <Crown size={18} color="#d97706" /> App Download
               </Link>
             </div>
             
