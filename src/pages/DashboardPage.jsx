@@ -112,6 +112,7 @@ const DashboardPage = () => {
       }
       
       // Determine active plan
+      const userId = u.id || u.email;
       if (u.plan && u.plan !== 'None') {
          setActivePlan(u.plan);
       } else {
