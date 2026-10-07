@@ -544,54 +544,79 @@ app.post('/api/withdrawals', async (c) => {
     if (!userId || !amount || !method) return c.json({ error: 'Missing required fields' }, 400);
 
     const withdrawAmount = parseFloat(String(amount).replace(/[^0-9.-]+/g, '')) || 0;
+    if (withdrawAmount <= 0) {
+      return c.json({ error: 'Please enter a valid withdrawal amount.' }, 400);
+    }
 
     // --- Backend balance & minimum limit validation ---
-    // 1. Get gateway minLimit from gateways table
+    // 1. Get gateway minLimit & maxLimit from payment_gateways table
     const gatewayRow = await c.env.DB.prepare(
-      `SELECT details FROM gateways WHERE name = ? AND type = 'withdraw' LIMIT 1`
-    ).bind(method).first();
+      `SELECT details FROM payment_gateways WHERE (LOWER(name) = LOWER(?) OR name = ?) AND type = 'withdraw' LIMIT 1`
+    ).bind(method, method).first();
 
     let minLimit = 500; // default minimum
+    let maxLimit = 999999999;
     if (gatewayRow?.details) {
       try {
         const parsed = JSON.parse(String(gatewayRow.details));
-        minLimit = parseFloat(parsed.minLimit || 500);
+        if (parsed.minLimit) minLimit = parseFloat(parsed.minLimit) || 500;
+        if (parsed.maxLimit) maxLimit = parseFloat(parsed.maxLimit) || 999999999;
       } catch (_) {}
     }
 
     if (withdrawAmount < minLimit) {
-      return c.json({ error: `Minimum withdrawal for ${method} is Rs${minLimit}. You entered Rs${withdrawAmount}.` }, 400);
+      return c.json({ error: `Minimum withdrawal for ${method} is Rs${minLimit.toLocaleString()}. You entered Rs${withdrawAmount.toLocaleString()}.` }, 400);
     }
 
-    // 2. Get user balance
+    if (withdrawAmount > maxLimit) {
+      return c.json({ error: `Maximum withdrawal for ${method} is Rs${maxLimit.toLocaleString()}. You entered Rs${withdrawAmount.toLocaleString()}.` }, 400);
+    }
+
+    // 2. Lookup user by ID or email
     const userRow = await c.env.DB.prepare(
-      `SELECT balance FROM users WHERE id = ?`
-    ).bind(userId).first();
-    const userBalance = parseFloat(String(userRow?.balance || 0));
+      `SELECT id, name, email, balance, plan FROM users WHERE id = ? OR email = ? LIMIT 1`
+    ).bind(userId, userId).first();
 
-    // Check if user balance is below the minimum limit
-    if (userBalance < minLimit) {
-      return c.json({ error: `Aap ka balance Rs${userBalance} hai jo minimum limit Rs${minLimit} se kam hai. Withdrawal mumkin nahi.` }, 400);
+    if (!userRow) {
+      return c.json({ error: 'User account not found.' }, 404);
     }
 
-    // 3. Calculate total pending/approved withdrawals to get available balance
+    const canonicalUserId = String(userRow.id);
+    const userEmail = String(userRow.email);
+    const userName = String(user || userRow.name || 'User');
+    const userBaseBalance = parseFloat(String(userRow.balance || 0));
+
+    // 3. Calculate dynamic balance: baseBalance + totalProfits - totalWithdrawn
+    const profitRow = await c.env.DB.prepare(
+      `SELECT SUM(CAST(amount AS REAL)) as total FROM transactions WHERE (userId = ? OR userId = ?) AND type = 'profit'`
+    ).bind(canonicalUserId, userEmail).first();
+    const totalProfits = parseFloat(String(profitRow?.total || 0));
+
     const withdrawalsResult = await c.env.DB.prepare(
-      `SELECT SUM(CAST(amount AS REAL)) as total FROM withdrawals WHERE userId = ? AND status != 'Rejected'`
-    ).bind(userId).first();
+      `SELECT SUM(CAST(amount AS REAL)) as total FROM withdrawals WHERE (userId = ? OR userId = ?) AND status != 'Rejected'`
+    ).bind(canonicalUserId, userEmail).first();
     const totalWithdrawn = parseFloat(String(withdrawalsResult?.total || 0));
 
-    const availableBalance = userBalance - totalWithdrawn;
+    const availableBalance = (userBaseBalance + totalProfits) - totalWithdrawn;
+
+    // Check if available balance is below minimum limit or requested amount
+    if (availableBalance < minLimit) {
+      return c.json({ error: `آپ کا balance Rs${Math.max(0, availableBalance).toLocaleString()} ہے جو minimum limit Rs${minLimit.toLocaleString()} سے کم ہے۔ Withdrawal ممکن نہیں۔` }, 400);
+    }
 
     if (withdrawAmount > availableBalance) {
-      return c.json({ error: `Insufficient balance. Available: Rs${availableBalance.toFixed(2)}, Requested: Rs${withdrawAmount}.` }, 400);
+      return c.json({ error: `Insufficient balance. Available: Rs${availableBalance.toLocaleString()}, Requested: Rs${withdrawAmount.toLocaleString()}.` }, 400);
     }
     // --- End validation ---
 
+    const withdrawId = id || `WID-${Math.floor(100000 + Math.random() * 900000)}`;
+    const withdrawDate = date || (new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + `, ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`);
+
     await c.env.DB.prepare(
       `INSERT INTO withdrawals (id, userId, user, amount, method, accountDetails, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, userId, user, amount, method, accountDetails, date, status || 'Pending').run();
+    ).bind(withdrawId, canonicalUserId, userName, withdrawAmount, method, accountDetails || '', withdrawDate, status || 'Pending').run();
 
-    return c.json({ message: 'Withdrawal requested', id }, 201);
+    return c.json({ message: 'Withdrawal requested successfully', id: withdrawId }, 201);
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }
@@ -600,8 +625,17 @@ app.post('/api/withdrawals', async (c) => {
 app.get('/api/withdrawals/user/:userId', async (c) => {
   const userId = c.req.param('userId');
   try {
-    const { results } = await c.env.DB.prepare(`SELECT * FROM withdrawals WHERE userId = ? ORDER BY date DESC`).bind(userId).all();
-    return c.json(results);
+    const userRow = await c.env.DB.prepare(
+      `SELECT id, email FROM users WHERE id = ? OR email = ? LIMIT 1`
+    ).bind(userId, userId).first();
+
+    const canonicalId = userRow ? String(userRow.id) : userId;
+    const userEmail = userRow ? String(userRow.email) : userId;
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT * FROM withdrawals WHERE userId = ? OR userId = ? ORDER BY rowid DESC`
+    ).bind(canonicalId, userEmail).all();
+    return c.json(results || []);
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }
@@ -609,8 +643,8 @@ app.get('/api/withdrawals/user/:userId', async (c) => {
 
 app.get('/api/withdrawals', adminAuth, async (c) => {
   try {
-    const { results } = await c.env.DB.prepare(`SELECT * FROM withdrawals ORDER BY date DESC`).all();
-    return c.json(results);
+    const { results } = await c.env.DB.prepare(`SELECT * FROM withdrawals ORDER BY rowid DESC`).all();
+    return c.json(results || []);
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

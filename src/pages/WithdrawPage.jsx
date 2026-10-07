@@ -13,8 +13,9 @@ const WithdrawPage = () => {
   const [gateways, setGateways] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
   const [hasActivePlan, setHasActivePlan] = useState(null); // null means loading
+  const [submitting, setSubmitting] = useState(false);
   const [calculatedBalance, setCalculatedBalance] = useState(0);
-  
+
   useEffect(() => {
     // Fetch gateways
     fetch(`${API_BASE_URL}/api/gateways/withdraw`)
@@ -94,8 +95,9 @@ const WithdrawPage = () => {
     }
   }, []);
 
-  const handleWithdrawSubmit = (e) => {
+  const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     // Validate amount against gateway min/max limits
     const amount = parseFloat(withdrawAmount);
@@ -133,36 +135,70 @@ const WithdrawPage = () => {
       return;
     }
 
+    if (!accountName.trim()) {
+      setToastMessage('Please enter account holder name.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    if (!accountNumber.trim()) {
+      setToastMessage('Please enter account number.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     const newTransaction = {
       id: `WID-${Math.floor(100000 + Math.random() * 900000)}`,
       userId: u.id || u.email,
-      user: u.name,
+      user: u.name || 'User',
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + `, ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
       amount: withdrawAmount,
       method: selectedGateway.name,
-      accountDetails: `${accountName} / ${accountNumber}`,
+      accountDetails: `${accountName.trim()} / ${accountNumber.trim()}`,
       status: 'Pending',
       type: 'withdraw'
     };
 
-    fetch(`${API_BASE_URL}/api/withdrawals`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(newTransaction)
-    }).catch(err => console.error('Failed to submit withdrawal', err));
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_BASE_URL}/api/withdrawals`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(newTransaction)
+      });
 
-    setToastMessage(`Withdrawal request of Rs${withdrawAmount} submitted successfully and is now Pending.`);
-    
-    setTimeout(() => {
-      setToastMessage(null);
-      setSelectedGateway(null);
-      setWithdrawAmount('');
-      setAccountNumber('');
-      setAccountName('');
-      navigate('/withdraw-history');
-    }, 2500);
+      const resData = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setToastMessage(resData.error || resData.details || 'Withdrawal request failed. Please check your balance and try again.');
+        setTimeout(() => setToastMessage(null), 5000);
+        setSubmitting(false);
+        return;
+      }
+
+      setToastMessage(`Withdrawal request of Rs${Number(withdrawAmount).toLocaleString()} submitted successfully and is now Pending.`);
+      setCalculatedBalance(prev => Math.max(0, prev - amount));
+      
+      setTimeout(() => {
+        setToastMessage(null);
+        setSelectedGateway(null);
+        setWithdrawAmount('');
+        setAccountNumber('');
+        setAccountName('');
+        setSubmitting(false);
+        navigate('/withdraw-history');
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to submit withdrawal', err);
+      setToastMessage('Network error submitting withdrawal. Please try again.');
+      setTimeout(() => setToastMessage(null), 4000);
+      setSubmitting(false);
+    }
   };
 
   if (hasActivePlan === false) {
@@ -451,8 +487,9 @@ const WithdrawPage = () => {
 
               <button 
                 type="submit"
-                style={{ width: '100%', padding: '16px', background: 'var(--gradient-gold)', border: 'none', borderRadius: '12px', color: 'white', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)', transition: 'all 0.2s' }}>
-                Continue to Withdraw
+                disabled={submitting}
+                style={{ width: '100%', padding: '16px', background: submitting ? '#cbd5e1' : 'var(--gradient-gold)', border: 'none', borderRadius: '12px', color: 'white', fontWeight: '900', fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer', boxShadow: submitting ? 'none' : '0 4px 15px rgba(245, 158, 11, 0.3)', transition: 'all 0.2s' }}>
+                {submitting ? 'Processing...' : 'Continue to Withdraw'}
               </button>
             </form>
           </div>
