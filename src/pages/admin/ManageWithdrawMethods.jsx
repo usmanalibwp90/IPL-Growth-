@@ -21,7 +21,8 @@ const ManageWithdrawMethods = () => {
         if (data && data.length > 0) {
           const parsed = data.map(g => ({
              ...JSON.parse(g.details || '{}'),
-             id: g.id
+             id: g.id,
+             fromDB: true
           }));
           setMethods(parsed);
         } else {
@@ -30,9 +31,7 @@ const ManageWithdrawMethods = () => {
       })
       .catch(err => {
          console.error(err);
-         const saved = localStorage.getItem('withdraw_methods');
-         if (saved) setMethods(JSON.parse(saved));
-         else setMethods(initialMethods);
+         setMethods(initialMethods);
       });
   };
 
@@ -46,7 +45,7 @@ const ManageWithdrawMethods = () => {
     const updated = { ...method, isActive: !method.isActive };
     const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    if (method.id && method.id > 10) {
+    if (method.fromDB) {
       await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -54,15 +53,20 @@ const ManageWithdrawMethods = () => {
       });
       fetchList();
     } else {
-      setMethods(methods.map(m => m.id === id ? updated : m));
-      localStorage.setItem('withdraw_methods', JSON.stringify(methods.map(m => m.id === id ? updated : m)));
+      await fetch(`${API_BASE_URL}/api/gateways`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'withdraw', name: updated.name, details: JSON.stringify(updated) })
+      });
+      fetchList();
     }
   };
 
   const handleDelete = async (id) => {
     if(window.confirm('Are you sure you want to delete this withdraw method?')) {
       const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
-      if (id > 10) {
+      const method = methods.find(m => m.id === id);
+      if (method && method.fromDB) {
          await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -91,7 +95,7 @@ const ManageWithdrawMethods = () => {
     e.preventDefault();
     const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    if (editingMethod.id && editingMethod.id > 10) {
+    if (editingMethod.fromDB) {
       // Update existing
       await fetch(`${API_BASE_URL}/api/gateways/${editingMethod.id}`, {
         method: 'PUT',

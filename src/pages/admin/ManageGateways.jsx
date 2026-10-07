@@ -19,7 +19,8 @@ const ManageGateways = () => {
         if (data && data.length > 0) {
           const parsed = data.map(g => ({
              ...JSON.parse(g.details || '{}'),
-             id: g.id
+             id: g.id,
+             fromDB: true
           }));
           setGateways(parsed);
         } else {
@@ -28,9 +29,7 @@ const ManageGateways = () => {
       })
       .catch(err => {
          console.error(err);
-         const saved = localStorage.getItem('payment_gateways');
-         if (saved) setGateways(JSON.parse(saved));
-         else setGateways(initialGateways);
+         setGateways(initialGateways);
       });
   };
 
@@ -44,7 +43,7 @@ const ManageGateways = () => {
     const updated = { ...gateway, isActive: !gateway.isActive };
     const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    if (gateway.id && gateway.id > 10) { // Assume > 10 means it came from DB (initial are 1-5)
+    if (gateway.fromDB) {
       await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -52,15 +51,20 @@ const ManageGateways = () => {
       });
       fetchList();
     } else {
-      setGateways(gateways.map(g => g.id === id ? updated : g));
-      localStorage.setItem('payment_gateways', JSON.stringify(gateways.map(g => g.id === id ? updated : g)));
+      await fetch(`${API_BASE_URL}/api/gateways`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ type: 'deposit', name: updated.name, details: JSON.stringify(updated) })
+      });
+      fetchList();
     }
   };
 
   const handleDelete = async (id) => {
     if(window.confirm('Are you sure you want to delete this payment method?')) {
       const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
-      if (id > 10) {
+      const gateway = gateways.find(g => g.id === id);
+      if (gateway && gateway.fromDB) {
          await fetch(`${API_BASE_URL}/api/gateways/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -89,7 +93,7 @@ const ManageGateways = () => {
     e.preventDefault();
     const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
     
-    if (editingGateway.id && editingGateway.id > 10) {
+    if (editingGateway.fromDB) {
       // Update existing
       await fetch(`${API_BASE_URL}/api/gateways/${editingGateway.id}`, {
         method: 'PUT',
