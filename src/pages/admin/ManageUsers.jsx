@@ -71,6 +71,12 @@ const ManageUsers = () => {
       });
       
       if (res.ok) {
+        // Update local map to ensure UI updates immediately
+        const newMap = { ...userPlansMap };
+        newMap[editingUser.id] = editPlan;
+        setUserPlansMap(newMap);
+        localStorage.setItem('user_plans_map', JSON.stringify(newMap));
+
         setUsers(users.map(u => 
           u.id === editingUser.id 
           ? { ...u, balance: Number(editBalance), plan: editPlan } 
@@ -229,7 +235,9 @@ const ManageUsers = () => {
                 
                 withdrawals.forEach(w => {
                   if (w.userId === user.id || w.userId === user.email || w.user === user.name) {
-                    dynamicBal -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+                    if (w.status !== 'Rejected') {
+                      dynamicBal -= parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
+                    }
                   }
                 });
                 
@@ -240,7 +248,7 @@ const ManageUsers = () => {
                   }
                 });
                 
-                const activePlan = userPlansMap[user.id] || userPlansMap[user.email] || user.plan || 'None';
+                const activePlan = (user.plan && user.plan !== 'None') ? user.plan : (userPlansMap[user.id] || userPlansMap[user.email] || 'None');
 
                 return (
                 <tr key={i} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>

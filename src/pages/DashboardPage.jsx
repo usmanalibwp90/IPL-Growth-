@@ -114,10 +114,9 @@ const DashboardPage = () => {
             return;
           } else {
             setIsBlocked(false);
-            if (data.plan) {
-              u.plan = data.plan;
-              localStorage.setItem('user', JSON.stringify(u));
-            }
+            if (data.plan) u.plan = data.plan;
+            if (data.balance !== undefined) u.balance = data.balance;
+            localStorage.setItem('user', JSON.stringify(u));
           }
         }
       } catch (err) {
@@ -154,7 +153,7 @@ const DashboardPage = () => {
           fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
         ]);
         
-        let dynamicBalance = 0;
+        let dynamicBalance = Number(u.balance || 0);
         let totalDeposit = 0;
         let pendingDeposit = 0;
         let totalWithdraw = 0;
@@ -175,7 +174,10 @@ const DashboardPage = () => {
             const amt = parseFloat(String(w.amount).replace(/[^0-9.-]+/g, '')) || 0;
             if (w.status === 'Approved') totalWithdraw += amt;
             else if (w.status === 'Pending') pendingWithdraw += amt;
-            dynamicBalance -= amt;
+            
+            if (w.status !== 'Rejected') {
+              dynamicBalance -= amt;
+            }
           });
         }
 
