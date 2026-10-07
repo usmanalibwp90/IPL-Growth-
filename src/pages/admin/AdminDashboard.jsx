@@ -15,33 +15,39 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    fetch(`${API_BASE_URL}/api/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/users`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_BASE_URL}/api/deposits`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_BASE_URL}/api/withdrawals`, { headers: { 'Authorization': `Bearer ${token}` } })
+    ])
+    .then(async ([usersRes, depRes, withRes]) => {
+      const users = await usersRes.json();
+      const deposits = await depRes.json();
+      const withdrawals = await withRes.json();
+
+      const usersArray = Array.isArray(users) ? users : [];
+      const depArray = Array.isArray(deposits) ? deposits : [];
+      const withArray = Array.isArray(withdrawals) ? withdrawals : [];
+      
+      const approvedDeposits = depArray.filter(d => d.status === 'Approved').reduce((acc, curr) => acc + (Number(String(curr.amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+      const approvedWithdrawals = withArray.filter(w => w.status === 'Approved').reduce((acc, curr) => acc + (Number(String(curr.amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+      const profit = Math.max(0, approvedDeposits - approvedWithdrawals);
+      
+      setStats([
+        { title: 'Total Users', value: usersArray.length.toString(), subtext: 'Registered users', icon: <Users size={22} />, color: '#3b82f6', bg: '#eff6ff' },
+        { title: 'Total Deposits', value: `Rs ${approvedDeposits.toLocaleString()}`, subtext: 'Approved deposits', icon: <ArrowDownToLine size={22} />, color: '#10b981', bg: '#ecfdf5' },
+        { title: 'Total Withdrawals', value: `Rs ${approvedWithdrawals.toLocaleString()}`, subtext: 'Approved withdrawals', icon: <ArrowUpFromLine size={22} />, color: '#f59e0b', bg: '#fffbeb' },
+        { title: 'Company Profit', value: `Rs ${profit.toLocaleString()}`, subtext: 'Net profit', icon: <DollarSign size={22} />, color: '#8b5cf6', bg: '#f5f3ff' },
+      ]);
+      
+      const formattedDeposits = depArray.map(d => ({ id: d.id, user: d.user || 'Unknown', type: 'Deposit', amount: `Rs ${d.amount}`, status: d.status, date: d.date }));
+      const formattedWithdrawals = withArray.map(w => ({ id: w.id, user: w.user || 'Unknown', type: 'Withdraw', amount: `Rs ${w.amount}`, status: w.status, date: w.date }));
+      
+      const allTrx = [...formattedDeposits, ...formattedWithdrawals].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+      setRecentTransactions(allTrx);
     })
-      .then(res => res.json())
-      .then(users => {
-        const usersArray = Array.isArray(users) ? users : [];
-        const deposits = JSON.parse(localStorage.getItem('deposit_history') || '[]');
-        const withdrawals = JSON.parse(localStorage.getItem('withdraw_history') || '[]');
-        
-        const approvedDeposits = deposits.filter(d => d.status === 'Approved').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-        const approvedWithdrawals = withdrawals.filter(w => w.status === 'Approved').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-        const profit = Math.max(0, approvedDeposits - approvedWithdrawals);
-        
-        setStats([
-          { title: 'Total Users', value: usersArray.length.toString(), subtext: 'Registered users', icon: <Users size={22} />, color: '#3b82f6', bg: '#eff6ff' },
-          { title: 'Total Deposits', value: `Rs ${approvedDeposits.toLocaleString()}`, subtext: 'Approved deposits', icon: <ArrowDownToLine size={22} />, color: '#10b981', bg: '#ecfdf5' },
-          { title: 'Total Withdrawals', value: `Rs ${approvedWithdrawals.toLocaleString()}`, subtext: 'Approved withdrawals', icon: <ArrowUpFromLine size={22} />, color: '#f59e0b', bg: '#fffbeb' },
-          { title: 'Company Profit', value: `Rs ${profit.toLocaleString()}`, subtext: 'Net profit', icon: <DollarSign size={22} />, color: '#8b5cf6', bg: '#f5f3ff' },
-        ]);
-        
-        const formattedDeposits = deposits.map(d => ({ id: d.id, user: d.user, type: 'Deposit', amount: `Rs ${d.amount}`, status: d.status, date: d.date }));
-        const formattedWithdrawals = withdrawals.map(w => ({ id: w.id, user: w.user, type: 'Withdraw', amount: `Rs ${w.amount}`, status: w.status, date: w.date }));
-        
-        const allTrx = [...formattedDeposits, ...formattedWithdrawals].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
-        setRecentTransactions(allTrx);
-      })
-      .catch(err => console.error(err));
+    .catch(err => console.error(err));
   }, []);
 
   const getStatusIcon = (status) => {
