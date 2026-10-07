@@ -32,7 +32,10 @@ const AppDownloadPage = () => {
         </p>
         
         {/* Download Button */}
-        <button style={{ background: 'var(--gradient-gold)', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '16px', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(234, 88, 12, 0.3)', width: '100%', justifyContent: 'center' }}>
+        <button 
+          onClick={() => window.location.href = '/downloads/IPL-Growth.apk'}
+          style={{ background: 'var(--gradient-gold)', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '16px', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(234, 88, 12, 0.3)', width: '100%', justifyContent: 'center' }}
+        >
           <Download size={22} />
           Download APK Now
         </button>
