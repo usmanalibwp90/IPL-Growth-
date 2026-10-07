@@ -41,6 +41,7 @@ const DashboardPage = () => {
     if (found && found.status === 'Blocked') return true;
     return false;
   });
+  const [teamStats, setTeamStats] = useState({ totalTeam: 0, teamInvestment: 0, teamCommission: 0 });
 
   const [homeConfig, setHomeConfig] = useState({
     whatsappNumber: '+923480470267',
@@ -194,6 +195,36 @@ const DashboardPage = () => {
       setStats({
         totalDeposit, pendingDeposit, totalWithdraw, pendingWithdraw
       });
+
+      // Fetch team stats
+      try {
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        const teamRes = await fetch(`${API_BASE_URL}/api/team`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (teamRes.ok) {
+          const tData = await teamRes.json();
+          let teamInv = 0;
+          let teamIds = new Set();
+          
+          if (tData.team) {
+             tData.team.forEach(m => teamIds.add(m.id));
+          }
+          if (tData.commissions) {
+             tData.commissions.forEach(c => {
+               teamIds.add(c.referred_user_id);
+               teamInv += Number(c.package_amount || 0);
+             });
+          }
+          setTeamStats({
+            totalTeam: teamIds.size,
+            teamInvestment: teamInv,
+            teamCommission: tData.totalCommission || 0
+          });
+        }
+      } catch (e) {
+         console.error("Failed to fetch team stats for dashboard", e);
+      }
 
     };
 
@@ -505,9 +536,9 @@ const DashboardPage = () => {
           { label: 'Total Withdraw', value: `Rs${stats.totalWithdraw.toLocaleString()}`, icon: <Upload size={20} color="#d97706" />, bg: '#fef3c7' },
           { label: 'Pending Deposit', value: `Rs${stats.pendingDeposit.toLocaleString()}`, icon: <Activity size={20} color="#ea580c" />, bg: '#ffedd5' },
           { label: 'Pending Withdraw', value: `Rs${stats.pendingWithdraw.toLocaleString()}`, icon: <Activity size={20} color="#d97706" />, bg: '#fef3c7' },
-          { label: 'Total Team', value: '0', icon: <Users2 size={20} color="#ea580c" />, bg: '#ffedd5' },
-          { label: 'Team Investment', value: 'Rs0', icon: <BarChart3 size={20} color="#d97706" />, bg: '#fef3c7' },
-          { label: 'Team Commission', value: 'Rs0', icon: <TrendingUp size={20} color="#ea580c" />, bg: '#ffedd5' }
+          { label: 'Total Team', value: `${teamStats.totalTeam}`, icon: <Users2 size={20} color="#ea580c" />, bg: '#ffedd5' },
+          { label: 'Team Investment', value: `Rs${teamStats.teamInvestment.toLocaleString()}`, icon: <BarChart3 size={20} color="#d97706" />, bg: '#fef3c7' },
+          { label: 'Team Commission', value: `Rs${teamStats.teamCommission.toLocaleString()}`, icon: <TrendingUp size={20} color="#ea580c" />, bg: '#ffedd5' }
         ].map((item, i) => (
           <div key={i} className="glass-card" style={{ padding: '16px', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
