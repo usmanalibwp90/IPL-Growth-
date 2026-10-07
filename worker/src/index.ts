@@ -690,6 +690,27 @@ app.post('/api/distribute-commission', adminAuth, async (c) => {
           `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, package_id, package_name, package_amount, level, commission_percentage, commission_amount, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(commissionId, uplinerId, userId, depositId || null, pkgName, pkgAmount, levels[i].level, levels[i].percentage * 100, commissionAmount, 'available', now).run();
+
+        // Record Level 1 Referral Bonus (Rs500 for first 10 qualified referrals)
+        if (levels[i].level === 1) {
+          const checkBonus = await c.env.DB.prepare(
+            'SELECT id FROM referral_bonuses WHERE referrer_user_id = ? AND referred_user_id = ?'
+          ).bind(uplinerId, userId).first();
+
+          if (!checkBonus) {
+            const countRes = await c.env.DB.prepare(
+              'SELECT COUNT(*) as count FROM referral_bonuses WHERE referrer_user_id = ?'
+            ).bind(uplinerId).first();
+            const currCount = Number(countRes?.count || 0);
+            const bAmount = currCount < 10 ? 500 : 0;
+            const bId = `BONUS-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            await c.env.DB.prepare(
+              `INSERT INTO referral_bonuses (id, referrer_user_id, referred_user_id, referral_level, package_id, package_name, package_amount, qualified_status, bonus_amount, bonus_awarded, status, created_at)
+               VALUES (?, ?, ?, 1, ?, ?, ?, 'Qualified', ?, 1, 'earned', ?)`
+            ).bind(bId, uplinerId, userId, depositId || null, pkgName, pkgAmount, bAmount, now).run();
+          }
+        }
         
         distributedCommissions.push({ level: levels[i].level, amount: commissionAmount, upliner: uplinerNode.name });
       }
@@ -751,7 +772,7 @@ app.get('/api/admin/backfill-commissions', async (c) => {
 });
 
 app.get('/api/team/:identifier?', async (c) => {
-  let identifier = c.req.param('identifier');
+  let identifier = c.req.param('identifier') || c.req.query('id') || c.req.query('userId');
   
   // Try to use token auth if available
   const authHeader = c.req.header('Authorization');
@@ -771,39 +792,153 @@ app.get('/api/team/:identifier?', async (c) => {
 
   try {
     // Determine user id or name
-    const { results: selfResults } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id = ? OR name = ?').bind(identifier, identifier).all();
-    if (!selfResults || selfResults.length === 0) return c.json({ team: [], commissions: [] });
+    const { results: selfResults } = await c.env.DB.prepare('SELECT id, name, balance FROM users WHERE id = ? OR name = ?').bind(identifier, identifier).all();
+    if (!selfResults || selfResults.length === 0) return c.json({ team: [], directReferrals: [], commissions: [], totalReferrals: 0, qualifiedLevel1Count: 0, referralBonusEarned: 0, totalCommission: 0, availableCommission: 0, commissionTransferUnlocked: false });
     
     const selfId = selfResults[0].id;
     const selfName = selfResults[0].name;
 
-    // Get team members (level 1 only)
-    const { results } = await c.env.DB.prepare(`SELECT id, name, joined, plan FROM users WHERE upliner = ? OR upliner = ?`).bind(selfId, selfName).all();
-    
+    // Get direct Level 1 team members
+    const { results: rawTeam } = await c.env.DB.prepare(`SELECT id, name, email, mobile, joined, plan FROM users WHERE upliner = ? OR upliner = ? ORDER BY id DESC`).bind(selfId, selfName).all();
+    const teamMembers = rawTeam || [];
+
     // Get commissions from referral_commissions
-    const { results: commissions } = await c.env.DB.prepare(`
-      SELECT r.referred_user_id, r.package_name, r.commission_amount, r.level, r.status, u.name as referred_name 
+    const { results: rawCommissions } = await c.env.DB.prepare(`
+      SELECT r.referred_user_id, r.package_id, r.package_name, r.package_amount, r.commission_amount, r.level, r.status, r.created_at, u.name as referred_name 
       FROM referral_commissions r
       LEFT JOIN users u ON r.referred_user_id = u.id
       WHERE r.referrer_id = ?
     `).bind(selfId).all();
-    
-    // Compute total and available commissions
-    const totalCommission = (commissions || []).reduce((sum, c) => sum + (c.commission_amount || 0), 0);
-    const availableCommission = (commissions || []).filter(c => c.status === 'available').reduce((sum, c) => sum + (c.commission_amount || 0), 0);
-    
-    return c.json({ team: results || [], commissions: commissions || [], totalCommission, availableCommission });
+    const commissions = rawCommissions || [];
+
+    // Get approved deposits
+    const { results: rawDeposits } = await c.env.DB.prepare(`SELECT userId, amount, planName, date FROM deposits WHERE status = 'Approved'`).all();
+    const deposits = rawDeposits || [];
+
+    // Map for fast lookup
+    const level1CommsByUserId = new Map();
+    commissions.forEach(cm => {
+      if (cm.level === 1) {
+        level1CommsByUserId.set(cm.referred_user_id, cm);
+      }
+    });
+
+    const approvedDepositsByUserId = new Map();
+    deposits.forEach(dp => {
+      approvedDepositsByUserId.set(dp.userId, dp);
+    });
+
+    // Query existing referral_bonuses
+    const { results: rawBonuses } = await c.env.DB.prepare(`SELECT * FROM referral_bonuses WHERE referrer_user_id = ?`).bind(selfId).all();
+    const existingBonusMap = new Map();
+    (rawBonuses || []).forEach(b => {
+      existingBonusMap.set(b.referred_user_id, b);
+    });
+
+    // Process each Level 1 member to determine qualification
+    const processedDirect: any[] = [];
+    const now = new Date().toISOString();
+
+    for (const member of teamMembers) {
+      const comm = level1CommsByUserId.get(member.id);
+      const dep = approvedDepositsByUserId.get(member.id);
+      const hasPlan = member.plan && String(member.plan).toLowerCase() !== 'none' && String(member.plan).trim() !== '';
+
+      const isQualified = !!(comm || dep || hasPlan);
+      const pkgName = comm?.package_name || dep?.planName || (hasPlan ? member.plan : 'No Package');
+      const pkgAmount = Number(comm?.package_amount || dep?.amount || 0);
+      const commEarned = Number(comm?.commission_amount || (pkgAmount > 0 ? pkgAmount * 0.16 : 0));
+
+      if (isQualified && !existingBonusMap.has(member.id)) {
+        // Auto-persist in referral_bonuses to ensure persistent sync across devices
+        const bonusId = `BONUS-${Math.floor(100000 + Math.random() * 900000)}`;
+        try {
+          await c.env.DB.prepare(`
+            INSERT OR IGNORE INTO referral_bonuses 
+            (id, referrer_user_id, referred_user_id, referral_level, package_id, package_name, package_amount, qualified_status, bonus_amount, bonus_awarded, status, created_at)
+            VALUES (?, ?, ?, 1, ?, ?, ?, 'Qualified', 500, 1, 'earned', ?)
+          `).bind(bonusId, selfId, member.id, dep?.id || null, pkgName, pkgAmount, now).run();
+        } catch (e) {
+          // ignore duplicate insert
+        }
+      }
+
+      processedDirect.push({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        joined: member.joined || 'Recent',
+        level: 'Level 1',
+        plan: pkgName,
+        packageAmount: pkgAmount,
+        commissionEarned: commEarned,
+        isQualified: isQualified,
+        status: isQualified ? 'Qualified' : 'Pending',
+        bonusAmount: 0 // calculated in milestone loop below
+      });
+    }
+
+    // Separate qualified and pending to correctly assign the first 10 milestone bonuses
+    const qualifiedMembers = processedDirect.filter(m => m.isQualified);
+    const pendingMembers = processedDirect.filter(m => !m.isQualified);
+
+    const qualifiedCount = qualifiedMembers.length;
+
+    // First 10 qualified members get Rs500 bonus
+    qualifiedMembers.forEach((m, idx) => {
+      m.bonusAmount = idx < 10 ? 500 : 0;
+      m.bonusStatus = idx < 10 ? 'Awarded' : 'Milestone Target Reached';
+    });
+
+    pendingMembers.forEach(m => {
+      m.bonusAmount = 0;
+      m.bonusStatus = 'Pending (No Package)';
+    });
+
+    const directReferrals = [...qualifiedMembers, ...pendingMembers];
+
+    // Referral bonus calculations
+    const referralBonusEarned = Math.min(qualifiedCount, 10) * 500;
+    const referralTarget = 10;
+    const remainingQualified = Math.max(10 - qualifiedCount, 0);
+    const commissionTransferUnlocked = qualifiedCount >= 10;
+
+    // Check if referral bonus was already transferred to wallet
+    const bonusClaimedRes = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM referral_bonuses WHERE referrer_user_id = ? AND status = 'transferred'
+    `).bind(selfId).first();
+    const isBonusClaimed = Number(bonusClaimedRes?.count || 0) >= 10;
+
+    // Total and available referral commissions (Levels 1, 2, 3)
+    const totalCommission = commissions.reduce((sum, c) => sum + (Number(c.commission_amount) || 0), 0);
+    const availableCommission = commissions.filter(c => c.status === 'available').reduce((sum, c) => sum + (Number(c.commission_amount) || 0), 0);
+
+    return c.json({
+      team: teamMembers,
+      directReferrals,
+      commissions,
+      totalReferrals: teamMembers.length,
+      qualifiedLevel1Count: qualifiedCount,
+      referralBonusEarned,
+      maxBonus: 5000,
+      bonusPerReferral: 500,
+      referralTarget,
+      remainingQualified,
+      commissionTransferUnlocked,
+      totalCommission,
+      availableCommission,
+      isBonusClaimed
+    });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }
 });
 
-// Transfer commission to main wallet
+// Transfer commission to main wallet (Requires 10 QUALIFIED Level 1 Referrals)
 app.post('/api/transfer-commission', userAuth, async (c) => {
   try {
     const authUser = c.get('user');
-    const { amount } = await c.req.json();
-    if (!amount) return c.json({ error: 'Missing parameters' }, 400);
+    const { amount } = await c.req.json().catch(() => ({ amount: 0 }));
 
     const userId = authUser.id;
     const { results: selfResults } = await c.env.DB.prepare('SELECT id, name, balance FROM users WHERE id = ?').bind(userId).all();
@@ -812,24 +947,39 @@ app.post('/api/transfer-commission', userAuth, async (c) => {
     const selfId = selfResults[0].id;
     const selfName = selfResults[0].name;
 
-    // Validate 10 referrals rule
-    const refCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE upliner = ? OR upliner = ?').bind(selfId, selfName).first();
-    const totalReferrals = refCount?.count || 0;
+    // Verify 10 QUALIFIED Level 1 referrals
+    const { results: members } = await c.env.DB.prepare(`SELECT id, plan FROM users WHERE upliner = ? OR upliner = ?`).bind(selfId, selfName).all();
+    const { results: comms } = await c.env.DB.prepare(`SELECT referred_user_id FROM referral_commissions WHERE referrer_id = ? AND level = 1`).bind(selfId).all();
+    const { results: deps } = await c.env.DB.prepare(`SELECT userId FROM deposits WHERE status = 'Approved'`).all();
 
-    if (totalReferrals < 10) {
-      return c.json({ error: `Complete 10 referrals to unlock commission transfer. Current: ${totalReferrals}/10` }, 403);
+    const commUserIds = new Set((comms || []).map((x: any) => x.referred_user_id));
+    const depUserIds = new Set((deps || []).map((x: any) => x.userId));
+
+    let qualifiedCount = 0;
+    for (const m of (members || [])) {
+      const hasPlan = m.plan && String(m.plan).toLowerCase() !== 'none' && String(m.plan).trim() !== '';
+      if (commUserIds.has(m.id) || depUserIds.has(m.id) || hasPlan) {
+        qualifiedCount++;
+      }
     }
 
-    // Sum available
+    if (qualifiedCount < 10) {
+      return c.json({ 
+        error: `Complete 10 qualified Level 1 referrals to unlock commission transfer. Current: ${qualifiedCount}/10` 
+      }, 403);
+    }
+
+    // Sum available commissions
     const available = await c.env.DB.prepare(
       `SELECT SUM(commission_amount) as total FROM referral_commissions WHERE referrer_id = ? AND status = 'available'`
     ).bind(selfId).first();
 
-    const totalAvailable = available?.total || 0;
-    
-    if (totalAvailable < amount) {
-      return c.json({ error: 'Insufficient available commission' }, 400);
+    const totalAvailable = Number(available?.total || 0);
+    if (totalAvailable <= 0) {
+      return c.json({ error: "You don't have any available commission to transfer." }, 400);
     }
+
+    const transferAmount = (amount && Number(amount) > 0 && Number(amount) <= totalAvailable) ? Number(amount) : totalAvailable;
 
     // Update referral commissions to transferred
     await c.env.DB.prepare(
@@ -839,16 +989,84 @@ app.post('/api/transfer-commission', userAuth, async (c) => {
     // Add to user balance
     await c.env.DB.prepare(
       `UPDATE users SET balance = balance + ? WHERE id = ?`
-    ).bind(totalAvailable, selfId).run();
+    ).bind(transferAmount, selfId).run();
 
     // Create a transaction
     const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
     const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     await c.env.DB.prepare(
       `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(trxId, selfId, 'User', 'Commission Transfer', totalAvailable, date, 'Transferred commission to main wallet').run();
+    ).bind(trxId, selfId, 'User', 'Commission Transfer', transferAmount, date, 'Transferred referral commission to main wallet').run();
 
-    return c.json({ message: 'Commission transferred successfully', transferred: totalAvailable });
+    return c.json({ message: `Rs${transferAmount.toLocaleString()} commission transferred successfully to main wallet!`, transferred: transferAmount });
+  } catch (err: any) {
+    return c.json({ error: 'Database error', details: err.message }, 500);
+  }
+});
+
+// Transfer/Claim Rs5,000 Referral Milestone Bonus to wallet
+app.post('/api/transfer-bonus', userAuth, async (c) => {
+  try {
+    const authUser = c.get('user');
+    const userId = authUser.id;
+
+    const { results: selfResults } = await c.env.DB.prepare('SELECT id, name, balance FROM users WHERE id = ?').bind(userId).all();
+    if (!selfResults || selfResults.length === 0) return c.json({ error: 'User not found' }, 404);
+
+    const selfId = selfResults[0].id;
+    const selfName = selfResults[0].name;
+
+    // Check qualified count
+    const { results: members } = await c.env.DB.prepare(`SELECT id, plan FROM users WHERE upliner = ? OR upliner = ?`).bind(selfId, selfName).all();
+    const { results: comms } = await c.env.DB.prepare(`SELECT referred_user_id FROM referral_commissions WHERE referrer_id = ? AND level = 1`).bind(selfId).all();
+    const { results: deps } = await c.env.DB.prepare(`SELECT userId FROM deposits WHERE status = 'Approved'`).all();
+
+    const commUserIds = new Set((comms || []).map((x: any) => x.referred_user_id));
+    const depUserIds = new Set((deps || []).map((x: any) => x.userId));
+
+    let qualifiedCount = 0;
+    for (const m of (members || [])) {
+      const hasPlan = m.plan && String(m.plan).toLowerCase() !== 'none' && String(m.plan).trim() !== '';
+      if (commUserIds.has(m.id) || depUserIds.has(m.id) || hasPlan) {
+        qualifiedCount++;
+      }
+    }
+
+    if (qualifiedCount < 10) {
+      return c.json({ 
+        error: `Complete 10 qualified Level 1 referrals to claim referral bonus. Current: ${qualifiedCount}/10` 
+      }, 403);
+    }
+
+    // Check if already claimed
+    const bonusClaimedRes = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM referral_bonuses WHERE referrer_user_id = ? AND status = 'transferred'
+    `).bind(selfId).first();
+
+    if (Number(bonusClaimedRes?.count || 0) >= 10) {
+      return c.json({ error: 'Referral bonus already claimed and transferred to wallet' }, 400);
+    }
+
+    const bonusAmount = 5000;
+
+    // Mark referral bonuses as transferred
+    await c.env.DB.prepare(`
+      UPDATE referral_bonuses SET status = 'transferred' WHERE referrer_user_id = ?
+    `).bind(selfId).run();
+
+    // Add to user balance
+    await c.env.DB.prepare(`
+      UPDATE users SET balance = balance + ? WHERE id = ?
+    `).bind(bonusAmount, selfId).run();
+
+    // Create a transaction
+    const trxId = `TRX-${Math.floor(1000 + Math.random() * 9000)}`;
+    const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    await c.env.DB.prepare(
+      `INSERT INTO transactions (id, userId, user, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(trxId, selfId, 'User', 'Referral Bonus Transfer', bonusAmount, date, 'Claimed Rs5,000 Level 1 Referral Milestone Reward').run();
+
+    return c.json({ message: 'Rs5,000 Referral Bonus transferred to your main wallet successfully!', transferred: bonusAmount });
   } catch (err: any) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }

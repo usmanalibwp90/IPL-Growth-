@@ -51,6 +51,48 @@ const db = new sqlite3.Database(dbPath, (err) => {
       message TEXT NOT NULL,
       created_at TEXT NOT NULL
     )`);
+
+    // Create Referral Commissions Table
+    db.run(`CREATE TABLE IF NOT EXISTS referral_commissions (
+      id TEXT PRIMARY KEY,
+      referrer_id TEXT NOT NULL,
+      referred_user_id TEXT NOT NULL,
+      package_id TEXT,
+      package_name TEXT,
+      package_amount REAL,
+      level INTEGER,
+      commission_percentage REAL,
+      commission_amount REAL,
+      status TEXT DEFAULT 'available',
+      created_at TEXT
+    )`);
+
+    // Create Referral Bonuses Table
+    db.run(`CREATE TABLE IF NOT EXISTS referral_bonuses (
+      id TEXT PRIMARY KEY,
+      referrer_user_id TEXT NOT NULL,
+      referred_user_id TEXT NOT NULL,
+      referral_level INTEGER DEFAULT 1,
+      package_id TEXT,
+      package_name TEXT,
+      package_amount REAL DEFAULT 0,
+      qualified_status TEXT DEFAULT 'Qualified',
+      bonus_amount REAL DEFAULT 500,
+      bonus_awarded INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'earned',
+      created_at TEXT NOT NULL
+    )`);
+
+    // Create Transactions Table
+    db.run(`CREATE TABLE IF NOT EXISTS transactions (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      user TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      date TEXT NOT NULL,
+      description TEXT
+    )`);
   }
 });
 
@@ -271,6 +313,126 @@ app.put('/api/tickets/:id', (req, res) => {
     function(err) {
       if (err) return res.status(500).json({ error: 'Database error' });
       res.json({ message: 'Ticket updated' });
+  });
+});
+
+// Team API
+app.get('/api/team/:identifier?', (req, res) => {
+  const identifier = req.params.identifier || req.query.id || req.query.userId;
+  if (!identifier) return res.status(401).json({ error: 'Unauthorized' });
+
+  db.all('SELECT id, name, balance FROM users WHERE id = ? OR name = ?', [identifier, identifier], (err, selfUsers) => {
+    if (err || !selfUsers || selfUsers.length === 0) {
+      return res.json({ team: [], directReferrals: [], commissions: [], totalReferrals: 0, qualifiedLevel1Count: 0, referralBonusEarned: 0, totalCommission: 0, availableCommission: 0, commissionTransferUnlocked: false });
+    }
+
+    const self = selfUsers[0];
+    db.all('SELECT id, name, email, mobile, joined, plan FROM users WHERE upliner = ? OR upliner = ?', [self.id, self.name], (err2, teamMembers) => {
+      const team = teamMembers || [];
+      db.all('SELECT * FROM referral_commissions WHERE referrer_id = ?', [self.id], (err3, commissionsList) => {
+        const comms = commissionsList || [];
+        
+        const commMap = new Map();
+        comms.forEach(c => {
+          if (c.level === 1) commMap.set(c.referred_user_id, c);
+        });
+
+        const processed = team.map(m => {
+          const comm = commMap.get(m.id);
+          const hasPlan = m.plan && String(m.plan).toLowerCase() !== 'none' && String(m.plan).trim() !== '';
+          const isQualified = !!(comm || hasPlan);
+          const pkgName = comm?.package_name || (hasPlan ? m.plan : 'No Package');
+          const pkgAmount = Number(comm?.package_amount || 0);
+          const commEarned = Number(comm?.commission_amount || 0);
+
+          return {
+            id: m.id,
+            name: m.name,
+            joined: m.joined || 'Recent',
+            level: 'Level 1',
+            plan: pkgName,
+            packageAmount: pkgAmount,
+            commissionEarned: commEarned,
+            isQualified,
+            status: isQualified ? 'Qualified' : 'Pending',
+            bonusAmount: 0
+          };
+        });
+
+        const qualifiedMembers = processed.filter(m => m.isQualified);
+        const pendingMembers = processed.filter(m => !m.isQualified);
+        const qualifiedCount = qualifiedMembers.length;
+
+        qualifiedMembers.forEach((m, idx) => {
+          m.bonusAmount = idx < 10 ? 500 : 0;
+          m.bonusStatus = idx < 10 ? 'Awarded' : 'Milestone Target Reached';
+        });
+
+        pendingMembers.forEach(m => {
+          m.bonusAmount = 0;
+          m.bonusStatus = 'Pending (No Package)';
+        });
+
+        const directReferrals = [...qualifiedMembers, ...pendingMembers];
+        const referralBonusEarned = Math.min(qualifiedCount, 10) * 500;
+        const totalCommission = comms.reduce((sum, c) => sum + (Number(c.commission_amount) || 0), 0);
+        const availableCommission = comms.filter(c => c.status === 'available').reduce((sum, c) => sum + (Number(c.commission_amount) || 0), 0);
+
+        res.json({
+          team,
+          directReferrals,
+          commissions: comms,
+          totalReferrals: team.length,
+          qualifiedLevel1Count: qualifiedCount,
+          referralBonusEarned,
+          maxBonus: 5000,
+          bonusPerReferral: 500,
+          referralTarget: 10,
+          remainingQualified: Math.max(10 - qualifiedCount, 0),
+          commissionTransferUnlocked: qualifiedCount >= 10,
+          totalCommission,
+          availableCommission
+        });
+      });
+    });
+  });
+});
+
+// Transfer Commission
+app.post('/api/transfer-commission', (req, res) => {
+  const { userId, amount } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  db.all('SELECT id, name, balance FROM users WHERE id = ?', [userId], (err, users) => {
+    if (err || !users || users.length === 0) return res.status(404).json({ error: 'User not found' });
+    const user = users[0];
+
+    db.all('SELECT id, plan FROM users WHERE upliner = ? OR upliner = ?', [user.id, user.name], (err2, team) => {
+      db.all('SELECT * FROM referral_commissions WHERE referrer_id = ? AND level = 1', [user.id], (err3, comms) => {
+        const commIds = new Set((comms || []).map(c => c.referred_user_id));
+        let qualifiedCount = 0;
+        (team || []).forEach(m => {
+          const hasPlan = m.plan && String(m.plan).toLowerCase() !== 'none';
+          if (commIds.has(m.id) || hasPlan) qualifiedCount++;
+        });
+
+        if (qualifiedCount < 10) {
+          return res.status(403).json({ error: `Complete 10 qualified Level 1 referrals to unlock commission transfer. Current: ${qualifiedCount}/10` });
+        }
+
+        db.all("SELECT SUM(commission_amount) as total FROM referral_commissions WHERE referrer_id = ? AND status = 'available'", [user.id], (err4, rows) => {
+          const available = Number(rows?.[0]?.total || 0);
+          if (available <= 0) return res.status(400).json({ error: "No available commission to transfer." });
+
+          const transferAmount = (amount && Number(amount) <= available) ? Number(amount) : available;
+          db.run("UPDATE referral_commissions SET status = 'transferred' WHERE referrer_id = ? AND status = 'available'", [user.id], () => {
+            db.run('UPDATE users SET balance = balance + ? WHERE id = ?', [transferAmount, user.id], () => {
+              res.json({ message: `Rs${transferAmount.toLocaleString()} commission transferred successfully!`, transferred: transferAmount });
+            });
+          });
+        });
+      });
+    });
   });
 });
 
