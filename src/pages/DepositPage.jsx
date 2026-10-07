@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { resolveGatewayIcon } from '../utils/gatewayIcons';
 
 const DepositPage = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ const DepositPage = () => {
             return {
               id: g.id,
               name: g.name,
-              icon: parsed.iconImage || (parsed.type === 'easypaisa' ? '/easypaisa.png' : parsed.type === 'jazzcash' ? '/jazzcash.png' : 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'),
+              icon: resolveGatewayIcon(g.name, parsed.iconImage),
               min: `Rs${parsed.minLimit || 500}.00`,
               max: `Rs${Number(parsed.maxLimit || 50000).toLocaleString()}.00`,
               fee: `Rs0.00 + 0.00%`, // deposits usually have no charge, or parsed.charge if any
@@ -169,8 +170,8 @@ const DepositPage = () => {
             {/* Soft Cut corner top left */}
             <div style={{ position: 'absolute', top: '-25px', left: '-25px', width: '50px', height: '50px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', transform: 'rotate(45deg)' }}></div>
             
-            <div style={{ width: '70px', height: '70px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', padding: '10px' }}>
-               <img src={g.icon} alt={g.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            <div style={{ width: '72px', height: '72px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+               <img src={g.icon} alt={g.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => { e.currentTarget.src = '/bank.svg'; }} />
             </div>
             
             <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--text-dark)', fontWeight: '900', textAlign: 'center' }}>{g.name}</h3>
@@ -209,13 +210,18 @@ const DepositPage = () => {
             <h2 style={{ margin: '0 0 4px 0', fontSize: '1.4rem', color: 'var(--text-dark)', fontWeight: '900' }}>Deposit Amount</h2>
             <p style={{ margin: '0 0 24px 0', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Enter the details to add funds.</p>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-              <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--gradient-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: '1.2rem', flexShrink: 0, boxShadow: '0 4px 10px rgba(217,119,6,0.2)' }}>
-                 {selectedGateway.name.substring(0, 2).toUpperCase()}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                 <img 
+                   src={selectedGateway.icon} 
+                   alt={selectedGateway.name} 
+                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                   onError={(e) => { e.currentTarget.src = '/bank.svg'; }}
+                 />
               </div>
               <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: 'var(--text-dark)', fontWeight: '900' }}>{selectedGateway.name}</h3>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700' }}>PKR Gateway</p>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', color: 'var(--text-dark)', fontWeight: '900' }}>{selectedGateway.name}</h3>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '700' }}>PKR Gateway</p>
               </div>
             </div>
 

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bankGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="28" fill="url(#bankGrad)"/>
+  <path d="M60 26L28 42V48H92V42L60 26Z" fill="#ffffff"/>
+  <rect x="34" y="52" width="8" height="28" rx="2" fill="#ffffff"/>
+  <rect x="48" y="52" width="8" height="28" rx="2" fill="#ffffff"/>
+  <rect x="64" y="52" width="8" height="28" rx="2" fill="#ffffff"/>
+  <rect x="78" y="52" width="8" height="28" rx="2" fill="#ffffff"/>
+  <rect x="26" y="84" width="68" height="6" rx="2" fill="#ffffff"/>
+  <rect x="22" y="92" width="76" height="4" rx="2" fill="#ffffff"/>
+</svg>

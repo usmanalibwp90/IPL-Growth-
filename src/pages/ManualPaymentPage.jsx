@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Copy, Info, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { resolveGatewayIcon } from '../utils/gatewayIcons';
 
 const ManualPaymentPage = () => {
   const navigate = useNavigate();
@@ -30,8 +31,7 @@ const ManualPaymentPage = () => {
               type: parsed.type || g.type,
               accountNumber: parsed.accountNumber,
               accountName: parsed.accountName,
-              logo: (parsed.type || g.type) === 'easypaisa' ? 'e' : (parsed.type || g.type) === 'jazzcash' ? 'J' : 'B',
-              iconImage: parsed.iconImage || null,
+              iconImage: resolveGatewayIcon(parsed.type || g.name, parsed.iconImage),
               color: (parsed.type || g.type) === 'easypaisa' ? '#22c55e' : (parsed.type || g.type) === 'jazzcash' ? '#f43f5e' : '#3b82f6',
               bg: (parsed.type || g.type) === 'easypaisa' ? '#dcfce7' : (parsed.type || g.type) === 'jazzcash' ? '#ffe4e6' : '#eff6ff'
             };
@@ -211,12 +211,8 @@ const ManualPaymentPage = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: details.iconImage ? 'transparent' : details.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: details.color, fontSize: '1.5rem', fontWeight: '900', border: details.iconImage ? 'none' : `2px solid ${details.color}`, flexShrink: 0, overflow: 'hidden' }}>
-              {details.iconImage ? (
-                <img src={details.iconImage} alt={details.type} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              ) : (
-                details.logo
-              )}
+            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', flexShrink: 0, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <img src={details.iconImage || resolveGatewayIcon(gateway)} alt={details.type || gateway} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.currentTarget.src = '/bank.svg'; }} />
             </div>
             <div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>Selected Gateway</div>
