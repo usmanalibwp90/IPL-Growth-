@@ -37,3 +37,10 @@ out
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# Android
+android-app/.gradle/
+android-app/app/build/
+android-app/build/
+
+

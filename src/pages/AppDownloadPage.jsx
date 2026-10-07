@@ -32,15 +32,16 @@ const AppDownloadPage = () => {
         </p>
         
         {/* Download Button */}
-        <button 
-          onClick={() => window.location.href = '/downloads/IPL-Growth.apk'}
-          style={{ background: 'var(--gradient-gold)', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '16px', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(234, 88, 12, 0.3)', width: '100%', justifyContent: 'center' }}
+        <a 
+          href="/downloads/IPL-Growth.apk"
+          download="IPL-Growth.apk"
+          style={{ textDecoration: 'none', background: 'var(--gradient-gold)', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '16px', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(234, 88, 12, 0.3)', width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}
         >
           <Download size={22} />
           Download APK Now
-        </button>
+        </a>
         <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '700', marginTop: '12px' }}>
-          Version 1.0.0 • Size: 12 MB • Requires Android 6.0+
+          Version 1.0.0 • Size: 5.5 MB • Requires Android 7.0+
         </div>
       </div>
 
