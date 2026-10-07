@@ -14,6 +14,33 @@ const ManualPaymentPage = () => {
   const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes in seconds
   const [toastMessage, setToastMessage] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [gateways, setGateways] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/gateways/deposit`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const active = data.filter(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return parsed.isActive !== false;
+          }).map(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return {
+              type: parsed.type || g.type,
+              accountNumber: parsed.accountNumber,
+              accountName: parsed.accountName,
+              logo: (parsed.type || g.type) === 'easypaisa' ? 'e' : (parsed.type || g.type) === 'jazzcash' ? 'J' : 'B',
+              iconImage: parsed.iconImage || null,
+              color: (parsed.type || g.type) === 'easypaisa' ? '#22c55e' : (parsed.type || g.type) === 'jazzcash' ? '#f43f5e' : '#3b82f6',
+              bg: (parsed.type || g.type) === 'easypaisa' ? '#dcfce7' : (parsed.type || g.type) === 'jazzcash' ? '#ffe4e6' : '#eff6ff'
+            };
+          });
+          setGateways(active);
+        }
+      })
+      .catch(err => console.error("Failed to load gateways", err));
+  }, []);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -37,27 +64,7 @@ const ManualPaymentPage = () => {
 
   const { m, s } = formatTime(timeLeft);
 
-  // Example Admin Gateway Details
-  const saved = localStorage.getItem('payment_gateways');
-  const defaultGateways = [
-    { type: 'easypaisa', accountNumber: '03083859194', accountName: 'HAMEEDA BIBI', logo: 'e', color: '#22c55e', bg: '#dcfce7' },
-    { type: 'jazzcash', accountNumber: '03011234567', accountName: 'ALI RAZA', logo: 'J', color: '#f43f5e', bg: '#ffe4e6' },
-    { type: 'bank', accountNumber: '0123456789', accountName: 'Bank', logo: 'B', color: '#3b82f6', bg: '#eff6ff' }
-  ];
-  
-  let allGateways = defaultGateways;
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    allGateways = parsed.map(g => ({
-      type: g.type,
-      accountNumber: g.accountNumber,
-      accountName: g.accountName,
-      logo: g.type === 'easypaisa' ? 'e' : g.type === 'jazzcash' ? 'J' : 'B',
-      iconImage: g.iconImage || null,
-      color: g.type === 'easypaisa' ? '#22c55e' : g.type === 'jazzcash' ? '#f43f5e' : '#3b82f6',
-      bg: g.type === 'easypaisa' ? '#dcfce7' : g.type === 'jazzcash' ? '#ffe4e6' : '#eff6ff'
-    }));
-  }
+
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -69,7 +76,9 @@ const ManualPaymentPage = () => {
     }
   };
 
-  const details = allGateways.find(g => g.type === gateway) || allGateways[0];
+  const details = gateways.find(g => g.type === gateway) || gateways[0] || {
+    type: 'easypaisa', accountNumber: 'Not configured', accountName: 'Not configured', logo: 'e', color: '#22c55e', bg: '#dcfce7'
+  };
   const amountStr = plan.price.replace('Rs', '') + '.00 PKR';
 
   const copyToClipboard = (text) => {

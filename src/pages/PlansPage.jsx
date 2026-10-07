@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Wallet, CheckCircle, Clock, PlayCircle, BarChart, Sparkles, Menu, Bell, X, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const plansData = [
   { id: 1, price: 'Rs460', daily: 'Rs83', total: 'Rs4,590', duration: '55 Day', ads: '1' },
@@ -21,6 +22,31 @@ const PlansPage = () => {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedGateway, setSelectedGateway] = useState('easypaisa');
+  const [gateways, setGateways] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/gateways/deposit`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const active = data.filter(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return parsed.isActive !== false;
+          }).map(g => {
+            const parsed = JSON.parse(g.details || '{}');
+            return {
+              id: g.id,
+              name: parsed.name || g.name,
+              type: parsed.type || g.type,
+              iconImage: parsed.iconImage || null,
+              isActive: parsed.isActive !== false
+            };
+          });
+          setGateways(active);
+        }
+      })
+      .catch(err => console.error("Failed to load gateways", err));
+  }, []);
 
   const openModal = (plan) => {
     setSelectedPlan(plan);
@@ -179,19 +205,11 @@ const PlansPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
               
               {(() => {
-                const saved = localStorage.getItem('payment_gateways');
-                const defaultGateways = [
-                  { id: 1, name: 'EasyPaisa', type: 'easypaisa', isActive: true },
-                  { id: 2, name: 'JazzCash', type: 'jazzcash', isActive: true }
-                ];
-                const allGateways = saved ? JSON.parse(saved) : defaultGateways;
-                const activeGateways = allGateways.filter(g => g.isActive);
-
-                if (activeGateways.length === 0) {
+                if (gateways.length === 0) {
                   return <div style={{ gridColumn: '1 / -1', textAlign: 'center', fontSize: '0.8rem', color: '#ef4444', fontWeight: 'bold' }}>No active payment methods available.</div>;
                 }
 
-                return activeGateways.map(gateway => (
+                return gateways.map(gateway => (
                   <div 
                     key={gateway.id}
                     onClick={() => setSelectedGateway(gateway.type)}
